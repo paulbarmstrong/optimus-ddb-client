@@ -25,5 +25,6 @@
 	"dependencies": {
 		"@aws-sdk/client-dynamodb": "^3.465.0",
 		"@aws-sdk/lib-dynamodb": "^3.465.0"
-	}
+	},
+	"keywords": ["experimental"]
 }
