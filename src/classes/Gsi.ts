@@ -2,12 +2,12 @@ import { ShapeDictionary } from "../Types"
 import { Table } from "./Table"
 
 export class Gsi<I extends ShapeDictionary, S extends keyof I, P extends keyof I> {
-	table: Table<I,any,any,any>
+	table: Table<I,any,any>
 	indexName: string
 	partitionKey: P
 	sortKey?: S
 	constructor(props: {
-		table: Table<I,any,any,any>,
+		table: Table<I,any,any>,
 		indexName: string,
 		partitionKey: P,
 		sortKey?: S

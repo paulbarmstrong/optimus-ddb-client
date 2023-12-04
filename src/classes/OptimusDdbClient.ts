@@ -10,7 +10,7 @@ import { Table } from "./Table"
 import { Gsi } from "./Gsi"
 
 type ItemData = {
-	table: Table<any, any, any, any>,
+	table: Table<any, any, any>,
 	key: Record<string, any>,
 	version: number,
 	delete: boolean,
@@ -26,7 +26,7 @@ export class OptimusDdbClient {
 	}
 
 	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
-		table: Table<I,P,S,any>,
+		table: Table<I,P,S>,
 		key: StringToObjectLiteral<P, ShapeToType<I[P]>> & StringToObjectLiteral<S, ShapeToType<I[S]>>
 	}): Promise<ShapeToType<DictionaryShape<I>> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
@@ -42,7 +42,7 @@ export class OptimusDdbClient {
 	}
 
 	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
-		table: Table<I,P,S,any>,
+		table: Table<I,P,S>,
 		keys: Array<StringToObjectLiteral<P, ShapeToType<I[P]>> & StringToObjectLiteral<S, ShapeToType<I[S]>>>
 	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
 		if (props.keys.length === 0) return []
@@ -67,7 +67,7 @@ export class OptimusDdbClient {
 	}
 	
 	async queryItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
-		index: Table<I,P,S,any> | Gsi<I,P,S>,
+		index: Table<I,P,S> | Gsi<I,P,S>,
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
 		sortKeyCondition?: ConditionalType<SortKeyCondition<S, ShapeToType<I[S]>>, AnyToNever<ShapeToType<I[S]>>>,
 		filterConditions?: Array<FilterConditionsFor<I>>
@@ -88,7 +88,7 @@ export class OptimusDdbClient {
 	}
 	
 	async scanItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
-		index: Table<I,P,S,any> | Gsi<I,P,S>,
+		index: Table<I,P,S> | Gsi<I,P,S>,
 		filterConditions?: Array<FilterConditionsFor<I>>
 	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
 		const paginator = paginateScan({ client: this.#ddbDocumentClient }, {
@@ -105,7 +105,7 @@ export class OptimusDdbClient {
 	}
 	
 	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
-			(table: Table<I,P,S,any>, item: ShapeToType<typeof table.itemShape>): ShapeToType<typeof table.itemShape> {
+			(table: Table<I,P,S>, item: ShapeToType<typeof table.itemShape>): ShapeToType<typeof table.itemShape> {
 		return this.#recordAndStripItem({ ...item }, table, true)
 	}
 	
@@ -202,7 +202,7 @@ export class OptimusDdbClient {
 	}
 	
 	#recordAndStripItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
-			(item: any, table: Table<I,P,S,any>, create: boolean): ShapeToType<typeof table.itemShape> {
+			(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
 		if (!create && !Number.isInteger(item.version)) throw new Error(`Item must have verison: ${JSON.stringify(item)}`)
 		const version = item.version
 		delete item.version

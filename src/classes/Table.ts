@@ -1,8 +1,7 @@
 import { DictionaryShape } from "shape-tape"
 import { ShapeDictionary } from "../Types"
-import { Gsi } from "./Gsi"
 
-export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof I, G extends Record<string,Gsi<any,any,any>>> {
+export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof I> {
 	table = this
 	tableName: string
 	itemShape: DictionaryShape<I>
@@ -10,13 +9,11 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 	sortKey?: S
 	attributes: Array<keyof I>
 	keyAttributes: Array<string>
-	gsis: G
 	constructor(props: {
 		tableName: string,
 		itemShape: DictionaryShape<I>,
 		partitionKey: P,
-		sortKey?: S,
-		gsis?: (table: Table<I,P,S,any>) => G
+		sortKey?: S
 	}) {
 		this.tableName = props.tableName
 		this.itemShape = props.itemShape
@@ -27,6 +24,5 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])
 		]
-		this.gsis = props.gsis !== undefined ? props.gsis(this) : {} as G
 	}
 }
