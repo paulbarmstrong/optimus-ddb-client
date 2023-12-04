@@ -30,11 +30,38 @@ const connectionsTable = new Table({
 })
 
 describe("types", () => {
+	describe("getItem", () => {
+		test("table with just partition key", () => {
+			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const promise: Promise<Resource> = optimus.getItem({
+				table: resourcesTable,
+				key: { id: "1234" }
+			})
+			promise.catch(() => undefined)
+		})
+		test("using itemNotFoundErrorOverride to convert to undefined", () => {
+			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const promise: Promise<Resource | undefined> = optimus.getItem({
+				table: resourcesTable,
+				key: { id: "1234" },
+				itemNotFoundErrorOverride: e => undefined
+			})
+			promise.catch(() => undefined)
+		})
+		test("using itemNotFoundErrorOverride to convert to MyError", () => {
+			class MyError extends Error {}
+			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const promise: Promise<Resource> = optimus.getItem({
+				table: resourcesTable,
+				key: { id: "1234" },
+				itemNotFoundErrorOverride: e => new MyError(e.message)
+			})
+			promise.catch(() => undefined)
+		})
+	})
 	describe("getItems", () => {
 		test("table with just partition key", () => {
-			const optimus = new OptimusDdbClient({
-				dynamoDbClient: dynamoDBClient
-			})
+			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
 			const promise: Promise<Array<Resource>> = optimus.getItems({
 				table: resourcesTable,
 				keys: [{
@@ -44,9 +71,7 @@ describe("types", () => {
 			promise.catch(() => undefined)
 		})
 		test("table with partition key and sort key", () => {
-			const optimus = new OptimusDdbClient({
-				dynamoDbClient: dynamoDBClient
-			})
+			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
 			const promise: Promise<Array<Connection>> = optimus.getItems({
 				table: connectionsTable,
 				keys: [{

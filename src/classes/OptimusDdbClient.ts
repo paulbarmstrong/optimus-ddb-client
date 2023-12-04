@@ -27,17 +27,27 @@ export class OptimusDdbClient {
 		this.#ddbDocumentClient = DynamoDBDocumentClient.from(props.dynamoDbClient)
 	}
 
-	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
+	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(props: {
 		table: Table<I,P,S>,
 		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
-	}): Promise<ShapeToType<DictionaryShape<I>>> {
+		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => E
+	}): Promise<E extends Error ? ShapeToType<DictionaryShape<I>> : ShapeToType<DictionaryShape<I>> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: props.table.tableName,
 			Key: props.key,
 			ConsistentRead: true
 		}))).Item
 		if (item === undefined) {
-			throw new ItemNotFoundError(props.key)
+			const error = props.itemNotFoundErrorOverride ? (
+				props.itemNotFoundErrorOverride(new ItemNotFoundError(props.key))
+			) : (
+				new ItemNotFoundError(props.key)
+			)
+			if (error instanceof Error) {
+				throw error
+			} else {
+				return undefined as E extends Error ? ShapeToType<DictionaryShape<I>> : ShapeToType<DictionaryShape<I>> | undefined
+			}
 		} else {
 			return this.#recordAndStripItem(item, props.table, false) as ShapeToType<typeof props.table.itemShape>
 		}
