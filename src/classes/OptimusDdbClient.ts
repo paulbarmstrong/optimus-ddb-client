@@ -2,7 +2,7 @@ import { DynamoDBClient, TransactionCanceledException } from "@aws-sdk/client-dy
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb"
 import { paginateQuery, paginateScan } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateShape } from "shape-tape"
-import { AnyToNever, ConditionalType, FilterConditionsFor, ItemsNotFoundError, OptimisticLockError, PartitionKeyCondition,
+import { AnyToNever, ConditionalType, FilterConditionsFor, ItemNotFoundError, ItemsNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { getDynamoDbExpression } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
@@ -30,14 +30,14 @@ export class OptimusDdbClient {
 	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		table: Table<I,P,S>,
 		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
-	}): Promise<ShapeToType<DictionaryShape<I>> | undefined> {
+	}): Promise<ShapeToType<DictionaryShape<I>>> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: props.table.tableName,
 			Key: props.key,
 			ConsistentRead: true
 		}))).Item
 		if (item === undefined) {
-			return undefined
+			throw new ItemNotFoundError(props.key)
 		} else {
 			return this.#recordAndStripItem(item, props.table, false) as ShapeToType<typeof props.table.itemShape>
 		}
@@ -106,9 +106,11 @@ export class OptimusDdbClient {
 		return items.map(item => this.#recordAndStripItem(item, props.index.table, false))
 	}
 	
-	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
-			(table: Table<I,P,S>, item: ShapeToType<typeof table.itemShape>): ShapeToType<typeof table.itemShape> {
-		return this.#recordAndStripItem({ ...item }, table, true)
+	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
+		table: Table<I,P,S>,
+		item: ShapeToType<typeof props.table.itemShape>
+	}): ShapeToType<typeof props.table.itemShape> {
+		return this.#recordAndStripItem({ ...props.item }, props.table, true)
 	}
 	
 	async commitItems(props: { items: Array<any> }) {
@@ -192,15 +194,15 @@ export class OptimusDdbClient {
 		})
 	}
 	
-	markItemForDeletion<T>(item: T) {
-		if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be marked for deletion: ${JSON.stringify(item)}`)
-		if (this.#recordedItems.get(item)!.delete) throw new Error(`Item is already marked for deletion: ${JSON.stringify(item)}`)
-		this.#recordedItems.get(item)!.delete = true
+	markItemForDeletion(props: { item: any }) {
+		if (!this.#recordedItems.has(props.item)) throw new Error(`Unrecorded item cannot be marked for deletion: ${JSON.stringify(props.item)}`)
+		if (this.#recordedItems.get(props.item)!.delete) throw new Error(`Item is already marked for deletion: ${JSON.stringify(props.item)}`)
+		this.#recordedItems.get(props.item)!.delete = true
 	}
 
-	getItemVersion<T>(item: T): number {
-		if (!this.#recordedItems.has(item)) throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(item)}`)
-		return this.#recordedItems.get(item)!.version
+	getItemVersion(props: { item: any }): number {
+		if (!this.#recordedItems.has(props.item)) throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(props.item)}`)
+		return this.#recordedItems.get(props.item)!.version
 	}
 	
 	#recordAndStripItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>

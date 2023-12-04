@@ -45,11 +45,20 @@ export class UnprocessedKeysError extends Error {
 	}
 }
 
+export class ItemNotFoundError extends Error {
+	key: Record<string,any>
+	constructor(key: Record<string,any>) {
+		super(`Item not found: ${JSON.stringify(key)}.`)
+		this.key = key
+	}
+}
+
+
 export class ItemsNotFoundError extends Error {
-	unfoundKeys: Array<Record<string,any>>
-	constructor(unfoundKeys: Array<Record<string,any>>) {
-		super(`${unfoundKeys.length} items not found.`)
-		this.unfoundKeys = unfoundKeys
+	keys: Array<Record<string,any>>
+	constructor(keys: Array<Record<string,any>>) {
+		super(`${keys.length} items not found.`)
+		this.keys = keys
 	}
 }
 
