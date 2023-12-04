@@ -1,7 +1,7 @@
 import { DictionaryShape } from "shape-tape"
 import { ShapeDictionary } from "../Types"
 
-export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof I> {
+export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof I = never> {
 	table = this
 	tableName: string
 	itemShape: DictionaryShape<I>

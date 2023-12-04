@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteComma
 import { paginateQuery, paginateScan } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateShape } from "shape-tape"
 import { AnyToNever, ConditionalType, FilterConditionsFor, ItemsNotFoundError, OptimisticLockError, PartitionKeyCondition,
-	ShapeDictionary, SortKeyCondition, StringToObjectLiteral, UnprocessedKeysError } from "../Types"
+	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { getDynamoDbExpression } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
@@ -20,14 +20,16 @@ type ItemData = {
 export class OptimusDdbClient {
 	#recordedItems: Map<any, ItemData>
 	#ddbDocumentClient: DynamoDBDocumentClient
-	constructor(dynamoDbClient: DynamoDBClient) {
+	constructor(props: {
+		dynamoDbClient: DynamoDBClient
+	}) {
 		this.#recordedItems = new Map()
-		this.#ddbDocumentClient = DynamoDBDocumentClient.from(dynamoDbClient)
+		this.#ddbDocumentClient = DynamoDBDocumentClient.from(props.dynamoDbClient)
 	}
 
 	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		table: Table<I,P,S>,
-		key: StringToObjectLiteral<P, ShapeToType<I[P]>> & StringToObjectLiteral<S, ShapeToType<I[S]>>
+		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
 	}): Promise<ShapeToType<DictionaryShape<I>> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: props.table.tableName,
@@ -43,7 +45,7 @@ export class OptimusDdbClient {
 
 	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		table: Table<I,P,S>,
-		keys: Array<StringToObjectLiteral<P, ShapeToType<I[P]>> & StringToObjectLiteral<S, ShapeToType<I[S]>>>
+		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>
 	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
 		if (props.keys.length === 0) return []
 		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({

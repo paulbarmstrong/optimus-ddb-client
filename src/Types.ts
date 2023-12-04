@@ -4,10 +4,6 @@ export type ShapeDictionary = { [key: string]: Shape }
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
 export type ConditionalType<X, Y> = Y extends never ? never : X
 
-export type StringToObjectLiteral<K extends string | number | symbol, V extends Shape> = {
-	[T in K]: V;
-}
-
 export type PartitionKeyCondition<L,R> = [L, "=", R]
 
 export type FilterConditionsFor<I extends ShapeDictionary> = {

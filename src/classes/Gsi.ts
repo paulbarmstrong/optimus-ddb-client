@@ -1,7 +1,7 @@
 import { ShapeDictionary } from "../Types"
 import { Table } from "./Table"
 
-export class Gsi<I extends ShapeDictionary, S extends keyof I, P extends keyof I> {
+export class Gsi<I extends ShapeDictionary, P extends keyof I, S extends keyof I = never> {
 	table: Table<I,any,any>
 	indexName: string
 	partitionKey: P
