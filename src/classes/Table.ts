@@ -16,7 +16,7 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 		itemShape: DictionaryShape<I>,
 		partitionKey: P,
 		sortKey?: S,
-		gsis: (table: Table<I,P,S,any>) => G
+		gsis?: (table: Table<I,P,S,any>) => G
 	}) {
 		this.tableName = props.tableName
 		this.itemShape = props.itemShape
@@ -27,6 +27,6 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])
 		]
-		this.gsis = props.gsis(this)
+		this.gsis = props.gsis !== undefined ? props.gsis(this) : {} as G
 	}
 }
