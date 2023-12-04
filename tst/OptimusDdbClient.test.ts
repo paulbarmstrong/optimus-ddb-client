@@ -67,6 +67,18 @@ describe("types", () => {
 			})
 			promise.catch(() => undefined)
 		})
+		test("using itemsNotFoundErrorOverride", () => {
+			class MyError extends Error {}
+			const optimus = new OptimusDdbClient()
+			const promise: Promise<Array<Resource>> = optimus.getItems({
+				table: resourcesTable,
+				keys: [{
+					id: "1234"
+				}],
+				itemsNotFoundErrorOverride: e => new MyError(e.message)
+			})
+			promise.catch(() => undefined)
+		})
 		test("table with partition key and sort key", () => {
 			const optimus = new OptimusDdbClient()
 			const promise: Promise<Array<Connection>> = optimus.getItems({

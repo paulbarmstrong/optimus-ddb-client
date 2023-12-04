@@ -55,7 +55,8 @@ export class OptimusDdbClient {
 
 	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		table: Table<I,P,S>,
-		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>
+		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
+		itemsNotFoundErrorOverride?: (e: ItemsNotFoundError) => Error
 	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
 		if (props.keys.length === 0) return []
 		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
@@ -73,7 +74,11 @@ export class OptimusDdbClient {
 			const unfoundItemKeys = props.keys.filter(key => !items.find(item => {
 				Object.entries(key).filter(keyAttr => item[keyAttr[0]] === keyAttr[1]).length === Object.entries(key).length
 			}))
-			throw new ItemsNotFoundError(unfoundItemKeys)
+			throw props.itemsNotFoundErrorOverride ? (
+				props.itemsNotFoundErrorOverride(new ItemsNotFoundError(unfoundItemKeys))
+			) : (
+				new ItemNotFoundError(unfoundItemKeys)
+			)
 		}
 		return items.map(item => this.#recordAndStripItem(item, props.table, false))
 	}
