@@ -1,4 +1,4 @@
-import { DynamoDBClient, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
+import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb"
 import { paginateQuery, paginateScan } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateShape } from "shape-tape"
@@ -20,11 +20,11 @@ type ItemData = {
 export class OptimusDdbClient {
 	#recordedItems: Map<any, ItemData>
 	#ddbDocumentClient: DynamoDBDocumentClient
-	constructor(props: {
-		dynamoDbClient: DynamoDBClient
+	constructor(props?: {
+		dynamoDbClientConfig?: DynamoDBClientConfig
 	}) {
 		this.#recordedItems = new Map()
-		this.#ddbDocumentClient = DynamoDBDocumentClient.from(props.dynamoDbClient)
+		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...props?.dynamoDbClientConfig}))
 	}
 
 	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(props: {

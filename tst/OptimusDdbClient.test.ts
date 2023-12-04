@@ -1,8 +1,5 @@
 import { ShapeToType, s } from "shape-tape"
 import { OptimusDdbClient, Table } from "../src"
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
-
-const dynamoDBClient = new DynamoDBClient()
 
 const resourceShape = s.dictionary({
 	id: s.string(),
@@ -32,7 +29,7 @@ const connectionsTable = new Table({
 describe("types", () => {
 	describe("getItem", () => {
 		test("table with just partition key", () => {
-			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const optimus = new OptimusDdbClient()
 			const promise: Promise<Resource> = optimus.getItem({
 				table: resourcesTable,
 				key: { id: "1234" }
@@ -40,7 +37,7 @@ describe("types", () => {
 			promise.catch(() => undefined)
 		})
 		test("using itemNotFoundErrorOverride to convert to undefined", () => {
-			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const optimus = new OptimusDdbClient()
 			const promise: Promise<Resource | undefined> = optimus.getItem({
 				table: resourcesTable,
 				key: { id: "1234" },
@@ -50,7 +47,7 @@ describe("types", () => {
 		})
 		test("using itemNotFoundErrorOverride to convert to MyError", () => {
 			class MyError extends Error {}
-			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const optimus = new OptimusDdbClient()
 			const promise: Promise<Resource> = optimus.getItem({
 				table: resourcesTable,
 				key: { id: "1234" },
@@ -61,7 +58,7 @@ describe("types", () => {
 	})
 	describe("getItems", () => {
 		test("table with just partition key", () => {
-			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const optimus = new OptimusDdbClient()
 			const promise: Promise<Array<Resource>> = optimus.getItems({
 				table: resourcesTable,
 				keys: [{
@@ -71,7 +68,7 @@ describe("types", () => {
 			promise.catch(() => undefined)
 		})
 		test("table with partition key and sort key", () => {
-			const optimus = new OptimusDdbClient({ dynamoDbClient: dynamoDBClient })
+			const optimus = new OptimusDdbClient()
 			const promise: Promise<Array<Connection>> = optimus.getItems({
 				table: connectionsTable,
 				keys: [{
