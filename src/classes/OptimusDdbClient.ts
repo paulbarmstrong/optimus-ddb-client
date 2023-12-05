@@ -128,7 +128,10 @@ export class OptimusDdbClient {
 		return this.#recordAndStripItem({ ...props.item }, props.table, true)
 	}
 	
-	async commitItems(props: { items: Array<any> }) {
+	async commitItems(props: {
+		items: Array<any>,
+		optimisticLockErrorOverride?: (e: OptimisticLockError) => Error
+	}) {
 		if (props.items.length === 0) return
 		const transactItems = props.items.map(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
@@ -189,7 +192,11 @@ export class OptimusDdbClient {
 				const exception = error as TransactionCanceledException
 				if (exception.CancellationReasons && exception.CancellationReasons.length > 0
 					&& exception.CancellationReasons.filter(reason => reason.Code !== "ConditionalCheckFailed").length === 0) {
-					throw new OptimisticLockError()
+					throw props.optimisticLockErrorOverride ? (
+						props.optimisticLockErrorOverride(new OptimisticLockError())
+					) : (
+						new OptimisticLockError()
+					)
 				} else {
 					throw new Error(`TransactionCanceledException due to: ${JSON.stringify(exception.CancellationReasons)}`)
 				}
