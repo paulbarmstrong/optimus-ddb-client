@@ -3,7 +3,6 @@ import { s } from "./Utilities"
 
 export type ShapeDictionary = { [key: string]: Shape }
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
-export type ConditionalType<X, Y> = Y extends never ? never : X
 
 export type PartitionKeyCondition<L,R> = [L, "=", R]
 

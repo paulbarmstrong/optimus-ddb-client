@@ -91,4 +91,40 @@ describe("types", () => {
 			promise.catch(() => undefined)
 		})
 	})
+	describe("queryItems", () => {
+		test("index with just partition key and no limit", () => {
+			const optimus = new OptimusDdbClient()
+			const promise: Promise<[Array<Resource>, undefined]> = optimus.queryItems({
+				index: resourcesTable,
+				partitionKeyCondition: ["id", "=", "100"]
+			})
+			promise.catch(() => undefined)
+		})
+		test("index with just partition key and a limit", () => {
+			const optimus = new OptimusDdbClient()
+			const promise: Promise<[Array<Resource>, string | undefined]> = optimus.queryItems({
+				index: resourcesTable,
+				partitionKeyCondition: ["id", "=", "100"],
+				limit: 10
+			})
+			promise.catch(() => undefined)
+		})
+	})
+	describe("scanItems", () => {
+		test("with no limit", () => {
+			const optimus = new OptimusDdbClient()
+			const promise: Promise<[Array<Resource>, undefined]> = optimus.scanItems({
+				index: resourcesTable
+			})
+			promise.catch(() => undefined)
+		})
+		test("with a limit", () => {
+			const optimus = new OptimusDdbClient()
+			const promise: Promise<[Array<Resource>, string | undefined]> = optimus.scanItems({
+				index: resourcesTable,
+				limit: 10
+			})
+			promise.catch(() => undefined)
+		})
+	})
 })

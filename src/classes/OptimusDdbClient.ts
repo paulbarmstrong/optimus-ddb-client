@@ -2,7 +2,7 @@ import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } fr
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb"
 import { paginateQuery, paginateScan } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateShape } from "shape-tape"
-import { AnyToNever, ConditionalType, FilterConditionsFor, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
+import { AnyToNever, FilterConditionsFor, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexKeyShape, getItemsFromPaginator } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
@@ -86,11 +86,11 @@ export class OptimusDdbClient {
 	async queryItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
-		sortKeyCondition?: ConditionalType<SortKeyCondition<S, ShapeToType<I[S]>>, AnyToNever<ShapeToType<I[S]>>>,
+		sortKeyCondition?: AnyToNever<ShapeToType<I[S]>> extends never ? never : SortKeyCondition<S, ShapeToType<I[S]>>,
 		filterConditions?: Array<FilterConditionsFor<I>>,
 		limit?: number,
 		nextToken?: string
-	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, string | undefined]> {
+	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, typeof props.limit extends number ? string | undefined : undefined]> {
 		const paginator = paginateQuery({ client: this.#ddbDocumentClient }, {
 			TableName: props.index.table.tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
@@ -106,7 +106,7 @@ export class OptimusDdbClient {
 		const [items, lastEvaluatedKey] = await getItemsFromPaginator(paginator, props.limit)
 		return [
 			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
-			encodeNextToken(lastEvaluatedKey)
+			encodeNextToken(lastEvaluatedKey) as typeof props.limit extends number ? string | undefined : undefined
 		]
 	}
 	
@@ -115,7 +115,7 @@ export class OptimusDdbClient {
 		filterConditions?: Array<FilterConditionsFor<I>>,
 		limit?: number,
 		nextToken?: string
-	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, string | undefined]> {
+	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, typeof props.limit extends number ? string | undefined : undefined]> {
 		const paginator = paginateScan({ client: this.#ddbDocumentClient }, {
 			TableName: props.index.table.tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
@@ -129,7 +129,7 @@ export class OptimusDdbClient {
 		const [items, lastEvaluatedKey] = await getItemsFromPaginator(paginator, props.limit)
 		return [
 			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
-			encodeNextToken(lastEvaluatedKey)
+			encodeNextToken(lastEvaluatedKey) as typeof props.limit extends number ? string | undefined : undefined
 		]
 	}
 	
