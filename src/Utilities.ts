@@ -1,6 +1,10 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
-import { ConditionCondition, FilterCondition, PartitionKeyCondition, SortKeyCondition } from "./Types"
+import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, SortKeyCondition } from "./Types"
+import { Shape, ShapeToType, s, validateShape } from "shape-tape"
+import { Paginator, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
+import { Table } from "./classes/Table"
+import { Gsi } from "./classes/Gsi"
 
 export function getDynamoDbExpression(props: {
 	partitionKeyCondition?: PartitionKeyCondition<any,any>,
@@ -65,4 +69,42 @@ export function getDynamoDbConditionExpressionString<L,R>
 	} else {
 		throw new Error(`Unexpected condition ${condition}.`)
 	}
+}
+
+export function encodeNextToken<T extends Record<string, any>>(lastEvaluatedKey: T | undefined): string | undefined {
+	if (lastEvaluatedKey === undefined) return undefined
+	return Buffer.from(JSON.stringify(lastEvaluatedKey), "utf-8").toString("base64")
+}
+
+export function decodeNextToken<T extends Shape>(nextToken: string | undefined, keyShape: T)
+		: ShapeToType<typeof keyShape> | undefined {
+	if (nextToken === undefined) return undefined
+	try {
+		return validateShape(JSON.parse(Buffer.from(nextToken, "base64").toString()), keyShape)
+	} catch (error) {
+		throw new InvalidNextTokenError()
+	}
+}
+
+export function getIndexKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
+	return s.dictionary({
+		[index.partitionKey]: index.table.itemShape.dictionary()[index.partitionKey],
+		...(index.sortKey ? (
+			{ [index.sortKey]: index.table.itemShape.dictionary()[index.sortKey] }
+		) : (
+			{}
+		))
+	})
+}
+
+export async function getItemsFromPaginator(paginator: Paginator<QueryCommandOutput | ScanCommandOutput>, limit: number | undefined)
+		: Promise<[Array<Record<string, any>>, Record<string, any> | undefined]> {
+	const items: Array<Record<string, any>> = []
+	for await (const page of paginator) {
+		items.push(...page.Items!)
+		if (limit && items.length >= limit) {
+			return [items.slice(0, limit), page.LastEvaluatedKey]
+		}
+	}
+	return [items, undefined]
 }

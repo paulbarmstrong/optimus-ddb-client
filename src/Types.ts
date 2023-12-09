@@ -66,3 +66,9 @@ export class OptimisticLockError extends Error {
 		super(message)
 	}
 }
+
+export class InvalidNextTokenError extends Error {
+	constructor(message = "Invalid nextToken.") {
+		super(message)
+	}
+}

@@ -4,7 +4,7 @@ import { paginateQuery, paginateScan } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateShape } from "shape-tape"
 import { AnyToNever, ConditionalType, FilterConditionsFor, ItemNotFoundError, ItemsNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
-import { getDynamoDbExpression } from "../Utilities"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexKeyShape, getItemsFromPaginator } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -87,8 +87,10 @@ export class OptimusDdbClient {
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
 		sortKeyCondition?: ConditionalType<SortKeyCondition<S, ShapeToType<I[S]>>, AnyToNever<ShapeToType<I[S]>>>,
-		filterConditions?: Array<FilterConditionsFor<I>>
-	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
+		filterConditions?: Array<FilterConditionsFor<I>>,
+		limit?: number,
+		nextToken?: string
+	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, string | undefined]> {
 		const paginator = paginateQuery({ client: this.#ddbDocumentClient }, {
 			TableName: props.index.table.tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
@@ -97,28 +99,38 @@ export class OptimusDdbClient {
 				partitionKeyCondition: props.partitionKeyCondition,
 				sortKeyCondition: props.sortKeyCondition,
 				filterConditions: props.filterConditions ? props.filterConditions : []
-			})
+			}),
+			ExclusiveStartKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index)),
+			Limit: props.limit
 		})
-		const items = []
-		for await (const page of paginator) items.push(...page.Items!)
-		return items.map(item => this.#recordAndStripItem(item, props.index.table, false))
+		const [items, lastEvaluatedKey] = await getItemsFromPaginator(paginator, props.limit)
+		return [
+			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
+			encodeNextToken(lastEvaluatedKey)
+		]
 	}
 	
 	async scanItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		index: Table<I,P,S> | Gsi<I,P,S>,
-		filterConditions?: Array<FilterConditionsFor<I>>
-	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
+		filterConditions?: Array<FilterConditionsFor<I>>,
+		limit?: number,
+		nextToken?: string
+	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, string | undefined]> {
 		const paginator = paginateScan({ client: this.#ddbDocumentClient }, {
 			TableName: props.index.table.tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
 			ConsistentRead: props.index instanceof Table,
 			...getDynamoDbExpression({
 				filterConditions: props.filterConditions ? props.filterConditions : []
-			})
+			}),
+			ExclusiveStartKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index)),
+			Limit: props.limit
 		})
-		const items = []
-		for await (const page of paginator) items.push(...page.Items!)
-		return items.map(item => this.#recordAndStripItem(item, props.index.table, false))
+		const [items, lastEvaluatedKey] = await getItemsFromPaginator(paginator, props.limit)
+		return [
+			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
+			encodeNextToken(lastEvaluatedKey)
+		]
 	}
 	
 	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
