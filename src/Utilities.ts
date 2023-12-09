@@ -1,7 +1,7 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
 import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, SortKeyCondition } from "./Types"
-import { Shape, ShapeToType, s, validateShape } from "shape-tape"
+import { Shape, ShapeToType, s as sh, validateShape } from "shape-tape"
 import { Paginator, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
@@ -87,7 +87,7 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 }
 
 export function getIndexKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
-	return s.dictionary({
+	return sh.dictionary({
 		[index.partitionKey]: index.table.itemShape.dictionary()[index.partitionKey],
 		...(index.sortKey ? (
 			{ [index.sortKey]: index.table.itemShape.dictionary()[index.sortKey] }
@@ -107,4 +107,8 @@ export async function getItemsFromPaginator(paginator: Paginator<QueryCommandOut
 		}
 	}
 	return [items, undefined]
+}
+
+export function s(num: number) {
+	return num === 1 ? "" : "s"
 }

@@ -2,7 +2,7 @@ import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } fr
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb"
 import { paginateQuery, paginateScan } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateShape } from "shape-tape"
-import { AnyToNever, ConditionalType, FilterConditionsFor, ItemNotFoundError, ItemsNotFoundError, OptimisticLockError, PartitionKeyCondition,
+import { AnyToNever, ConditionalType, FilterConditionsFor, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexKeyShape, getItemsFromPaginator } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
@@ -39,9 +39,9 @@ export class OptimusDdbClient {
 		}))).Item
 		if (item === undefined) {
 			const error = props.itemNotFoundErrorOverride ? (
-				props.itemNotFoundErrorOverride(new ItemNotFoundError(props.key))
+				props.itemNotFoundErrorOverride(new ItemNotFoundError([props.key]))
 			) : (
-				new ItemNotFoundError(props.key)
+				new ItemNotFoundError([props.key])
 			)
 			if (error instanceof Error) {
 				throw error
@@ -56,7 +56,7 @@ export class OptimusDdbClient {
 	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
 		table: Table<I,P,S>,
 		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
-		itemsNotFoundErrorOverride?: (e: ItemsNotFoundError) => Error
+		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error
 	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
 		if (props.keys.length === 0) return []
 		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
@@ -74,8 +74,8 @@ export class OptimusDdbClient {
 			const unfoundItemKeys = props.keys.filter(key => !items.find(item => {
 				Object.entries(key).filter(keyAttr => item[keyAttr[0]] === keyAttr[1]).length === Object.entries(key).length
 			}))
-			throw props.itemsNotFoundErrorOverride ? (
-				props.itemsNotFoundErrorOverride(new ItemsNotFoundError(unfoundItemKeys))
+			throw props.itemNotFoundErrorOverride ? (
+				props.itemNotFoundErrorOverride(new ItemNotFoundError(unfoundItemKeys))
 			) : (
 				new ItemNotFoundError(unfoundItemKeys)
 			)

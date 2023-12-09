@@ -67,7 +67,7 @@ describe("types", () => {
 			})
 			promise.catch(() => undefined)
 		})
-		test("using itemsNotFoundErrorOverride", () => {
+		test("using itemNotFoundErrorOverride", () => {
 			class MyError extends Error {}
 			const optimus = new OptimusDdbClient()
 			const promise: Promise<Array<Resource>> = optimus.getItems({
@@ -75,7 +75,7 @@ describe("types", () => {
 				keys: [{
 					id: "1234"
 				}],
-				itemsNotFoundErrorOverride: e => new MyError(e.message)
+				itemNotFoundErrorOverride: e => new MyError(e.message)
 			})
 			promise.catch(() => undefined)
 		})

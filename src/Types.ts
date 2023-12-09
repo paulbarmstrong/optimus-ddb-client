@@ -1,4 +1,5 @@
 import { Shape, ShapeToType } from "shape-tape"
+import { s } from "./Utilities"
 
 export type ShapeDictionary = { [key: string]: Shape }
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
@@ -46,18 +47,10 @@ export class UnprocessedKeysError extends Error {
 }
 
 export class ItemNotFoundError extends Error {
-	key: Record<string,any>
-	constructor(key: Record<string,any>) {
-		super(`Item not found: ${JSON.stringify(key)}.`)
-		this.key = key
-	}
-}
-
-export class ItemsNotFoundError extends Error {
-	keys: Array<Record<string,any>>
-	constructor(keys: Array<Record<string,any>>) {
-		super(`${keys.length} items not found.`)
-		this.keys = keys
+	itemKeys: Array<Record<string,any>>
+	constructor(itemKeys: Array<Record<string,any>>) {
+		super(`${itemKeys.length} item${s(itemKeys.length)} not found.`)
+		this.itemKeys = itemKeys
 	}
 }
 
