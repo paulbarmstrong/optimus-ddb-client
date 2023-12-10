@@ -149,6 +149,8 @@ export class OptimusDdbClient {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
 			if (item.version !== undefined) throw new Error(`Item contains illegal version attribute: ${JSON.stringify(item)}`)
 			const itemData = this.#recordedItems.get(item)!
+			if (Object.keys(itemData.key).filter(attrName => item[attrName] !== itemData.key[attrName]).length > 0)
+				throw new Error(`Item key changes aren't supported. key: ${JSON.stringify(itemData.key)}, item: ${JSON.stringify(item)}`)
 			validateShape(item, itemData.table.itemShape)
 			Object.keys(item).forEach(key => {
 				if (item[key] === undefined) delete item[key]
@@ -257,12 +259,15 @@ export class OptimusDdbClient {
 	#getUpdateDynamoDbExpression<I extends ShapeDictionary>
 			(item: ShapeToType<DictionaryShape<I>>, itemData: ItemData) {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
-		const set = itemData.table.attributes.concat("version")
-			.filter(key => item[key as string] !== undefined)
-			.map(key => `${builder.addName(key as string)} = ${builder.addValue(item[key as string])}`).join(", ")
+		const set = itemData.table.attributes
+			.filter(key => item[key as string] !== undefined && !itemData.table.keyAttributes.includes(key as string))
+			.concat("version")
+			.map(key => `${builder.addName(key as string)} = ${builder.addValue(item[key as string])}`)
+			.join(", ")
 		const remove = itemData.table.attributes
 			.filter(key => item[key as string] === undefined && !itemData.table.keyAttributes.includes(key as string))
-			.map(key => builder.addName(key as string)).join(", ")
+			.map(key => builder.addName(key as string))
+			.join(", ")
 		return {
 			UpdateExpression: remove.length > 0 ? `SET ${set} REMOVE ${remove}` : `SET ${set}`,
 			ConditionExpression: `attribute_exists(${builder.addName("version")}) AND `
