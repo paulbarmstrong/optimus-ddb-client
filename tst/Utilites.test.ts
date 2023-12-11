@@ -25,7 +25,7 @@ describe("getDynamoDbConditionExpressionString", () => {
 			expect(builder.attributeValues).toStrictEqual({ ":A3333_0": 3333, ":A4444_0": 4444, ":A5555_0": 5555 })
 		})
 	})
-	describe("equals", () => {
+	describe("=", () => {
 		test("string", () => {
 			const builder: ExpressionBuilder = new ExpressionBuilder()
 			expect(getDynamoDbConditionExpressionString(["id", "=", "abcd"], builder))
@@ -41,10 +41,21 @@ describe("getDynamoDbConditionExpressionString", () => {
 			expect(builder.attributeValues).toStrictEqual({ ":A0_0": 0 })
 		})
 	})
+	describe("!=", () => {
+		test("string", () => {
+			for (const neq of ["!=", "<>"]) {
+				const builder: ExpressionBuilder = new ExpressionBuilder()
+				expect(getDynamoDbConditionExpressionString(["id", neq as "!=" | "<>", "abcd"], builder))
+					.toStrictEqual("#id_0 <> :abcd_0")
+				expect(builder.attributeNames).toStrictEqual({ "#id_0": "id" })
+				expect(builder.attributeValues).toStrictEqual({ ":abcd_0": "abcd" })
+			}
+		})
+	})
 	test("begins with", () => {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
 		expect(getDynamoDbConditionExpressionString(["name", "begins with", "P"], builder))
-			.toStrictEqual("#name_0 begins_with :P_0")
+			.toStrictEqual("begins_with(#name_0, :P_0)")
 		expect(builder.attributeNames).toStrictEqual({ "#name_0": "name" })
 		expect(builder.attributeValues).toStrictEqual({ ":P_0": "P" })
 	})

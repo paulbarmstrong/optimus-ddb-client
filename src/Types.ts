@@ -6,9 +6,9 @@ export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) 
 
 export type PartitionKeyCondition<L,R> = [L, "=", R]
 
-export type FilterConditionsFor<I extends ShapeDictionary> = {
-	[K in keyof I]: FilterCondition<K, ShapeToType<I[K]>>
-}[keyof I];
+export type FilterConditionsFor<I extends ShapeDictionary, P extends keyof I, S extends keyof I> = {
+	[K in Exclude<Exclude<keyof I, P>, S>]: FilterCondition<K, ShapeToType<I[K]>>
+}[Exclude<Exclude<keyof I, P>, S>];
 
 export type SortKeyCondition<L, R> = R extends string ? (
 	[L, "=", R] | 

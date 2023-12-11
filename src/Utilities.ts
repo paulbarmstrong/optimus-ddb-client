@@ -1,8 +1,8 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
 import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, SortKeyCondition } from "./Types"
-import { Shape, ShapeToType, s as sh, validateShape } from "shape-tape"
-import { Paginator, QueryCommandOutput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
+import { Shape, ShapeToType, s as sh, validateObjectShape }  from "shape-tape"
+import { Paginator, QueryCommandInput, QueryCommandOutput, ScanCommandInput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
 
@@ -24,16 +24,18 @@ export function getDynamoDbExpression(props: {
 	const filterConditionExpression = filterConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
-	const conditionConditions = props.filterConditions ? props.filterConditions : []
+	const conditionConditions = props.conditionConditions ? props.conditionConditions : []
 	const conditionConditionExpression = conditionConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
+	const attributeNames = builder.attributeNames
+	const attributeValues = builder.attributeValues
 	return {
 		KeyConditionExpression: keyConditions.length > 0 ? keyConditionExpression : undefined,
 		FilterExpression: filterConditions.length > 0 ? filterConditionExpression : undefined,
 		ConditionExpression: conditionConditions.length > 0 ? conditionConditionExpression : undefined,
-		ExpressionAttributeNames: builder.attributeNames,
-		ExpressionAttributeValues: builder.attributeValues
+		ExpressionAttributeNames: Object.entries(attributeNames).length > 0 ? attributeNames : undefined,
+		ExpressionAttributeValues: Object.entries(attributeValues).length > 0 ? attributeValues : undefined,
 	}
 }
 
@@ -52,6 +54,8 @@ export function getDynamoDbConditionExpressionString<L,R>
 			OPTIMUS_OPERATORS[condition[1]],
 			`(${condition[2].map(x => builder.addValue(x)).join(", ")})`
 		].join(" ")
+	} else if (condition[1] === "begins with" || condition[1] === "contains") {
+		return `${OPTIMUS_OPERATORS[condition[1]]}(${builder.addName(condition[0])}, ${builder.addValue(condition[2])})`
 	} else if (condition.length === 3) {
 		return [
 			builder.addName(condition[0]),
@@ -67,7 +71,7 @@ export function getDynamoDbConditionExpressionString<L,R>
 			builder.addValue(condition[4])
 		].join(" ")
 	} else {
-		throw new Error(`Unexpected condition ${condition}.`)
+		throw new Error(`Unexpected condition ${JSON.stringify(condition)}.`)
 	}
 }
 
@@ -80,7 +84,10 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 		: ShapeToType<typeof keyShape> | undefined {
 	if (nextToken === undefined) return undefined
 	try {
-		return validateShape(JSON.parse(Buffer.from(nextToken, "base64").toString()), keyShape)
+		return validateObjectShape({
+			object: JSON.parse(Buffer.from(nextToken, "base64").toString()),
+			shape: keyShape
+		})
 	} catch (error) {
 		throw new InvalidNextTokenError()
 	}
@@ -107,6 +114,27 @@ export async function getItemsFromPaginator(paginator: Paginator<QueryCommandOut
 		}
 	}
 	return [items, undefined]
+}
+
+export async function getItemsPages(props: {
+	params: QueryCommandInput | ScanCommandInput,
+	get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
+	limit: number | undefined,
+	lastEvaluatedKey: Record<string, any> | undefined
+})
+	: Promise<[Array<Record<string, any>>, Record<string, any> | undefined]> {
+	const items: Array<Record<string, any>> = []
+	let lastEvaluatedKey: Record<string, any> | undefined = props.lastEvaluatedKey
+	do {
+		const res = await props.get({
+			...props.params,
+			ExclusiveStartKey: lastEvaluatedKey,
+			Limit: props.limit ? props.limit - items.length : undefined
+		})
+		items.push(...res.Items!)
+		lastEvaluatedKey = res.LastEvaluatedKey
+	} while (lastEvaluatedKey !== undefined && !(props.limit && items.length === props.limit))
+	return [items, lastEvaluatedKey]
 }
 
 export function s(num: number) {

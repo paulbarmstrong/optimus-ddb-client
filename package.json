@@ -1,11 +1,11 @@
 {
 	"name": "optimus-ddb-client",
-	"version": "1.0.21",
+	"version": "1.0.22",
 	"main": "dist/src/index",
 	"typings": "dist/src/index",
 	"scripts": {
 		"build": "tsc",
-		"test": "npx jest",
+		"test": "npx jest --runInBand",
 		"prepublishOnly": "npm run build && npm run test"
 	},
 	"repository": {
@@ -17,6 +17,7 @@
 	"description": "A high level TypeScript/JavaScript DynamoDB client focused on transactional consistency and strong typing.",
 	"devDependencies": {
 		"@types/jest": "^29.5.8",
+		"dynamodb-local": "^0.0.32",
 		"ts-jest": "^29.1.1"
 	},
 	"peerDependencies": {
@@ -26,5 +27,7 @@
 		"@aws-sdk/client-dynamodb": "^3.465.0",
 		"@aws-sdk/lib-dynamodb": "^3.465.0"
 	},
-	"keywords": ["experimental"]
+	"keywords": [
+		"experimental"
+	]
 }
