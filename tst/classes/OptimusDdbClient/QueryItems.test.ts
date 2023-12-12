@@ -105,6 +105,20 @@ describe("table with sort key", () => {
 			])
 			expect(nextToken).toStrictEqual(undefined)
 		})
+		
+		test("scanIndexForward=false", async () => {
+			const [connections, nextToken] = await optimus.queryItems({
+				index: connectionsTable,
+				partitionKeyCondition: ["id", "=", "4568"],
+				scanIndexForward: false
+			})
+			expect(connections).toStrictEqual([
+				{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 },
+				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 },
+				{ id: "4568", resourceId: "aaaa", updatedAt: 1702186485444 }
+			])
+			expect(nextToken).toStrictEqual(undefined)
+		})
 	})
 	describe("= sort key condition", () => {
 		test("no result", async () => {

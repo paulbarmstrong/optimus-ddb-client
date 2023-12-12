@@ -32,6 +32,17 @@ beforeAll(async () => {
 	}))
 })
 
+test("unfiltered", async () => {
+	const [resources] = await optimus.scanItems({
+		index: resourcesTable
+	})
+	expect(resources).toStrictEqual([
+		{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
+		{ id: "bbbb", status: "available", updatedAt: 1702185591111 },
+		{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
+	])
+})
+
 test("=", async () => {
 	const [resources] = await optimus.scanItems({
 		index: resourcesTable,

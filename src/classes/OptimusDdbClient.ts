@@ -1,5 +1,5 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
-import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb"
+import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
 import { AnyToNever, FilterConditionsFor, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
@@ -98,9 +98,10 @@ export class OptimusDdbClient {
 		sortKeyCondition?: AnyToNever<ShapeToType<I[S]>> extends never ? never : SortKeyCondition<S, ShapeToType<I[S]>>,
 		filterConditions?: Array<FilterConditionsFor<I,P,S>>,
 		limit?: L,
-		nextToken?: string
+		nextToken?: string,
+		scanIndexForward?: boolean
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
-		const params = {
+		const params: QueryCommandInput = {
 			TableName: props.index.table.tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
 			ConsistentRead: props.index instanceof Table,
@@ -108,7 +109,8 @@ export class OptimusDdbClient {
 				partitionKeyCondition: props.partitionKeyCondition,
 				sortKeyCondition: props.sortKeyCondition,
 				filterConditions: props.filterConditions ? props.filterConditions : []
-			})
+			}),
+			ScanIndexForward: props.scanIndexForward
 		}
 		const [items, lastEvaluatedKey] = await getItemsPages({
 			params: params,
@@ -128,7 +130,7 @@ export class OptimusDdbClient {
 		limit?: L,
 		nextToken?: string
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
-		const params = {
+		const params: ScanCommandInput = {
 			TableName: props.index.table.tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
 			ConsistentRead: props.index instanceof Table,
