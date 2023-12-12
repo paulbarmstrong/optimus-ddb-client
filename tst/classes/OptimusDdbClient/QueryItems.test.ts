@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { connectionsTable, connectionsTableResourceIdGsi, resourcesTable } from "../../test-utilities/Constants"
-import { OptimusDdbClient } from "../../../src"
+import { MyError, connectionsTable, connectionsTableResourceIdGsi, resourcesTable } from "../../test-utilities/Constants"
+import { InvalidNextTokenError, OptimusDdbClient } from "../../../src"
 
 let optimus: OptimusDdbClient
 let dynamoDBDocumentClient: DynamoDBDocumentClient
@@ -380,4 +380,21 @@ test("for a GSI", async () => {
 		{ id: "5555", resourceId: "cccc", updatedAt: 1702186486734 },
 		{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 },
 	])
+})
+
+test("invalid nextToken", async () => {
+	await expect(optimus.queryItems({
+		index: resourcesTable,
+		partitionKeyCondition: ["id", "=", "4568"],
+		nextToken: "uihdwaulidnw"
+	})).rejects.toThrow(InvalidNextTokenError)
+})
+
+test("invalid nextToken with invalidNextTokenErrorOverride", async () => {
+	await expect(optimus.queryItems({
+		index: resourcesTable,
+		partitionKeyCondition: ["id", "=", "4568"],
+		nextToken: "uihdwaulidnw",
+		invalidNextTokenErrorOverride: _ => new MyError()
+	})).rejects.toThrow(MyError)
 })

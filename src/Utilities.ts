@@ -80,7 +80,8 @@ export function encodeNextToken<T extends Record<string, any>>(lastEvaluatedKey:
 	return Buffer.from(JSON.stringify(lastEvaluatedKey), "utf-8").toString("base64")
 }
 
-export function decodeNextToken<T extends Shape>(nextToken: string | undefined, keyShape: T)
+export function decodeNextToken<T extends Shape>(nextToken: string | undefined, keyShape: T,
+		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error)
 		: ShapeToType<typeof keyShape> | undefined {
 	if (nextToken === undefined) return undefined
 	try {
@@ -89,7 +90,11 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 			shape: keyShape
 		})
 	} catch (error) {
-		throw new InvalidNextTokenError()
+		if (invalidNextTokenErrorOverride !== undefined) {
+			throw invalidNextTokenErrorOverride(new InvalidNextTokenError())
+		} else {
+			throw new InvalidNextTokenError()
+		}
 	}
 }
 

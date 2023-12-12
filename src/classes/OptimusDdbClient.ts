@@ -1,7 +1,7 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
-import { AnyToNever, FilterConditionsFor, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
+import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexKeyShape, getItemsPages } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
@@ -97,9 +97,10 @@ export class OptimusDdbClient {
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
 		sortKeyCondition?: AnyToNever<ShapeToType<I[S]>> extends never ? never : SortKeyCondition<S, ShapeToType<I[S]>>,
 		filterConditions?: Array<FilterConditionsFor<I,P,S>>,
+		scanIndexForward?: boolean,
 		limit?: L,
 		nextToken?: string,
-		scanIndexForward?: boolean
+		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
 		const params: QueryCommandInput = {
 			TableName: props.index.table.tableName,
@@ -116,7 +117,7 @@ export class OptimusDdbClient {
 			params: params,
 			get: input => this.#ddbDocumentClient.send(new QueryCommand(input)),
 			limit: props.limit,
-			lastEvaluatedKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index))
+			lastEvaluatedKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index), props.invalidNextTokenErrorOverride)
 		})
 		return [
 			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
@@ -128,7 +129,8 @@ export class OptimusDdbClient {
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		filterConditions?: Array<FilterConditionsFor<I,never,never>>,
 		limit?: L,
-		nextToken?: string
+		nextToken?: string,
+		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
 		const params: ScanCommandInput = {
 			TableName: props.index.table.tableName,
@@ -142,7 +144,7 @@ export class OptimusDdbClient {
 			params: params,
 			get: input => this.#ddbDocumentClient.send(new ScanCommand(input)),
 			limit: props.limit,
-			lastEvaluatedKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index))
+			lastEvaluatedKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index), props.invalidNextTokenErrorOverride)
 		})
 		return [
 			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),

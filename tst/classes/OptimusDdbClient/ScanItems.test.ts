@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { OptimusDdbClient } from "../../../src"
-import { connectionsTable, connectionsTableResourceIdGsi, resourceShape, resourcesTable } from "../../test-utilities/Constants"
+import { InvalidNextTokenError, OptimusDdbClient } from "../../../src"
+import { MyError, connectionsTable, connectionsTableResourceIdGsi, resourceShape, resourcesTable } from "../../test-utilities/Constants"
 
 let optimus: OptimusDdbClient
 let dynamoDBDocumentClient: DynamoDBDocumentClient
@@ -211,4 +211,19 @@ test("in pages", async () => {
 		{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
 	])
 	expect(nextToken2).not.toStrictEqual(undefined)
+})
+
+test("invalid nextToken", async () => {
+	await expect(optimus.scanItems({
+		index: resourcesTable,
+		nextToken: "uihdwaulidnw"
+	})).rejects.toThrow(InvalidNextTokenError)
+})
+
+test("invalid nextToken with invalidNextTokenErrorOverride", async () => {
+	await expect(optimus.scanItems({
+		index: resourcesTable,
+		nextToken: "uihdwaulidnw",
+		invalidNextTokenErrorOverride: _ => new MyError()
+	})).rejects.toThrow(MyError)
 })
