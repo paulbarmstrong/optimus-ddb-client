@@ -371,15 +371,40 @@ describe("table with sort key", () => {
 	})
 })
 
-test("for a GSI", async () => {
-	const [connections] = await optimus.queryItems({
-		index: connectionsTableResourceIdGsi,
-		partitionKeyCondition: ["resourceId", "=", "cccc"]
+describe("for a GSI", () => {
+	test("multiple results", async () => {
+		const [connections, nextToken0] = await optimus.queryItems({
+			index: connectionsTableResourceIdGsi,
+			partitionKeyCondition: ["resourceId", "=", "cccc"]
+		})
+		expect(connections).toStrictEqual([
+			{ id: "5555", resourceId: "cccc", updatedAt: 1702186486734 },
+			{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 },
+		])
+		expect(nextToken0).toBeUndefined
 	})
-	expect(connections).toStrictEqual([
-		{ id: "5555", resourceId: "cccc", updatedAt: 1702186486734 },
-		{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 },
-	])
+
+	test("in pages", async () => {
+		const [connections0, nextToken0] = await optimus.queryItems({
+			index: connectionsTableResourceIdGsi,
+			partitionKeyCondition: ["resourceId", "=", "cccc"],
+			limit: 1
+		})
+		expect(connections0).toStrictEqual([
+			{ id: "5555", resourceId: "cccc", updatedAt: 1702186486734 }
+		])
+		expect(nextToken0).toBeDefined
+		const [connections1, nextToken1] = await optimus.queryItems({
+			index: connectionsTableResourceIdGsi,
+			partitionKeyCondition: ["resourceId", "=", "cccc"],
+			limit: 1,
+			nextToken: nextToken0
+		})
+		expect(connections1).toStrictEqual([
+			{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
+		])
+		expect(nextToken1).toBeUndefined
+	})
 })
 
 test("invalid nextToken", async () => {

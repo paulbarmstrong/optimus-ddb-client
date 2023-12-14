@@ -1,9 +1,10 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
-import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb"
+import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
+	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
 import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexKeyShape, getItemsPages } from "../Utilities"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -117,7 +118,8 @@ export class OptimusDdbClient {
 			params: params,
 			get: input => this.#ddbDocumentClient.send(new QueryCommand(input)),
 			limit: props.limit,
-			lastEvaluatedKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index), props.invalidNextTokenErrorOverride)
+			lastEvaluatedKey: decodeNextToken(props.nextToken, getLastEvaluatedKeyShape(props.index),
+				props.invalidNextTokenErrorOverride)
 		})
 		return [
 			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
@@ -144,7 +146,8 @@ export class OptimusDdbClient {
 			params: params,
 			get: input => this.#ddbDocumentClient.send(new ScanCommand(input)),
 			limit: props.limit,
-			lastEvaluatedKey: decodeNextToken(props.nextToken, getIndexKeyShape(props.index), props.invalidNextTokenErrorOverride)
+			lastEvaluatedKey: decodeNextToken(props.nextToken, getLastEvaluatedKeyShape(props.index),
+				props.invalidNextTokenErrorOverride)
 		})
 		return [
 			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),

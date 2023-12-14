@@ -98,11 +98,23 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 	}
 }
 
-export function getIndexKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
+export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
 	return sh.dictionary({
-		[index.partitionKey]: index.table.itemShape.dictionary()[index.partitionKey],
-		...(index.sortKey ? (
-			{ [index.sortKey]: index.table.itemShape.dictionary()[index.sortKey] }
+		[index.table.partitionKey]: index.table.itemShape.dictionary()[index.table.partitionKey],
+		...(index.table.sortKey ? (
+			{ [index.table.sortKey]: index.table.itemShape.dictionary()[index.table.sortKey] }
+		) : (
+			{}
+		)),
+		...(index instanceof Gsi ? (
+			{
+				[index.partitionKey]: index.table.itemShape.dictionary()[index.partitionKey],
+				...(index.sortKey ? (
+					{ [index.sortKey]: index.table.itemShape.dictionary()[index.sortKey] }
+				) : (
+					{}
+				))
+			}
 		) : (
 			{}
 		))

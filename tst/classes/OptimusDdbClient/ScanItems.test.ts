@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { InvalidNextTokenError, OptimusDdbClient } from "../../../src"
-import { MyError, connectionsTable, connectionsTableResourceIdGsi, resourceShape, resourcesTable } from "../../test-utilities/Constants"
+import { MyError, connectionsTable, connectionsTableResourceIdGsi, resourcesTable } from "../../test-utilities/Constants"
 
 let optimus: OptimusDdbClient
 let dynamoDBDocumentClient: DynamoDBDocumentClient
@@ -29,6 +29,10 @@ beforeAll(async () => {
 	await dynamoDBDocumentClient.send(new PutCommand({
 		TableName: "Connections",
 		Item: { id: "4568", resourceId: "eeee", updatedAt: 1702183489321, version: 0 }
+	}))
+	await dynamoDBDocumentClient.send(new PutCommand({
+		TableName: "Connections",
+		Item: { id: "4999", resourceId: "dddd", updatedAt: 1702186465344, version: 0 }
 	}))
 })
 
@@ -170,17 +174,8 @@ test("using sort key attribute", async () => {
 		filterConditions: [["resourceId", "=", "dddd"]]
 	})
 	expect(connections).toStrictEqual([
-		{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
-	])
-})
-
-test("= from gsi", async () => {
-	const [connections] = await optimus.scanItems({
-		index: connectionsTableResourceIdGsi,
-		filterConditions: [["updatedAt", "=", 1702186485444]]
-	})
-	expect(connections).toStrictEqual([
-		{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
+		{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 },
+		{ id: "4999", resourceId: "dddd", updatedAt: 1702186465344 }
 	])
 })
 
@@ -227,3 +222,39 @@ test("invalid nextToken with invalidNextTokenErrorOverride", async () => {
 		invalidNextTokenErrorOverride: _ => new MyError()
 	})).rejects.toThrow(MyError)
 })
+
+describe("from a gsi", () => {
+	test("=", async () => {
+		const [connections, nextToken] = await optimus.scanItems({
+			index: connectionsTableResourceIdGsi,
+			filterConditions: [["updatedAt", "=", 1702186485444]]
+		})
+		expect(connections).toStrictEqual([
+			{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
+		])
+		expect(nextToken).toBeUndefined
+	})
+	
+	test("in pages", async () => {
+		const [connections0, nextToken0] = await optimus.queryItems({
+			index: connectionsTableResourceIdGsi,
+			partitionKeyCondition: ["resourceId", "=", "dddd"],
+			limit: 1
+		})
+		expect(connections0).toStrictEqual([
+			{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
+		])
+		expect(nextToken0).toBeDefined
+		const [connections1, nextToken1] = await optimus.queryItems({
+			index: connectionsTableResourceIdGsi,
+			partitionKeyCondition: ["resourceId", "=", "dddd"],
+			limit: 1,
+			nextToken: nextToken0
+		})
+		expect(connections1).toStrictEqual([
+			{ id: "4999", resourceId: "dddd", updatedAt: 1702186465344 }
+		])
+		expect(nextToken1).toBeUndefined
+	})
+})
+
