@@ -26,26 +26,24 @@ test("README example", async () => {
 		sortKey: "id"
 	})
 
-		// Perform operations on items in those tables.
+	// Perform operations on items in those tables.
 	// Example scenario - Handling an API request for adding a comment to a blog post:
 	async function handleCreateBlogPostComment(body: { blogPostId: string, commentContent: string }) {
-		// Get the blog post and handle the case where it doesn't exist.
+		// Get the blog post
 		const blogPost = await optimus.getItem({
 			table: blogPostsTable,
-			key: { id: body.blogPostId },
-			itemNotFoundErrorOverride: _ => new Error("Blog post not found!")
+			key: { id: body.blogPostId }
 		})
 
 		// Prepare a change to increase the blog post's numComments.
 		blogPost.numComments = blogPost.numComments + 1
 
 		// Prepare a new comment.
-		const commentId = crypto.randomUUID()
 		const comment = optimus.draftItem({
 			table: commentsTable,
 			item: {
 				blogPostId: body.blogPostId,
-				id: commentId,
+				id: crypto.randomUUID(),
 				content: body.commentContent
 			}
 		})
@@ -53,7 +51,7 @@ test("README example", async () => {
 		// Commit those changes in a transaction.
 		await optimus.commitItems({ items: [blogPost, comment] })
 
-		return { id: commentId }
+		return { id: comment.id }
 	}
 
 	const [optimus, ddbDocumentClient] = await prepDdbTest([blogPostsTable, commentsTable], [])

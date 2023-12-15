@@ -8,16 +8,15 @@ Optimus is a high level TypeScript/JavaScript DynamoDB client focused on strong 
 
 Consumers specify the indexes of their tables and the shapes of items in their tables. Optimus uses those specifications to provide the strongest possible typing for operations on those tables. All items, key parameters, and query expressions are fully typed for each table's specific indexes and items.
 
-Optimus provides a high level abstraction for DynamoDB transactions with optimistic locking. An abstracted version number attribute is used to facilitate optimistic locking. When consumers commit their changes Optimus does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and Optimus throws an error.
+Optimus provides a high level abstraction for DynamoDB transactions with optimistic locking. An abstracted version number attribute facilitates optimistic locking. When consumers commit their changes Optimus does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and Optimus throws an error.
 
 ### Installation
 ```
 npm install optimus-ddb-client shape-tape
 ```
-shape-tape is a peer dependency of optimus-ddb-client
+`shape-tape` is a peer dependency of `optimus-ddb-client`
 
 ### Usage
-1. Create Table class instances based on your DynamoDB tables.
 ```javascript
 import { Table, OptimusDdbClient } from "optimus-ddb-client"
 import { s } from "shape-tape"
@@ -49,23 +48,21 @@ const commentsTable = new Table({
 async function handleCreateBlogPostComment(props: { blogPostId: string, commentContent: string }) {
 	const optimus = new OptimusDdbClient()
 
-	// Get the blog post and handle the case where it doesn't exist.
+	// Get the blog post
 	const blogPost = await optimus.getItem({
 		table: blogPostsTable,
-		key: { id: body.blogPostId },
-		itemNotFoundErrorOverride: _ => new Error("Blog post not found!")
+		key: { id: body.blogPostId }
 	})
 
 	// Prepare a change to increase the blog post's numComments.
 	blogPost.numComments = blogPost.numComments + 1
 
 	// Prepare a new comment.
-	const commentId = crypto.randomUUID()
 	const comment = optimus.draftItem({
 		table: commentsTable,
 		item: {
 			blogPostId: body.blogPostId,
-			id: commentId,
+			id: crypto.randomUUID(),
 			content: body.commentContent
 		}
 	})
@@ -73,7 +70,7 @@ async function handleCreateBlogPostComment(props: { blogPostId: string, commentC
 	// Commit those changes in a transaction.
 	await optimus.commitItems({ items: [blogPost, comment] })
 
-	return { id: commentId }
+	return { id: comment.id }
 }
 ```
 
