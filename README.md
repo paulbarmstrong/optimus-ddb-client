@@ -43,11 +43,11 @@ const commentsTable = new Table({
 	sortKey: "id"
 })
 
+const optimus = new OptimusDdbClient()
+
 // Perform operations on items in those tables.
 // Example scenario - Handling an API request for adding a comment to a blog post:
 async function handleCreateBlogPostComment(props: { blogPostId: string, commentContent: string }) {
-	const optimus = new OptimusDdbClient()
-
 	// Get the blog post
 	const blogPost = await optimus.getItem({
 		table: blogPostsTable,
@@ -85,6 +85,6 @@ const blogPost: BlogPost = await optimus.getItem({
 })
 ```
 
-### Testing
+### Tests
 
 The GitHub repo's tst directory has unit tests and integ tests using DynamoDB local. You can run the tests by cloning the repo and running `npm install` then `npm run test`. You need to have java installed to run the tests because DynamoDB local requires java.

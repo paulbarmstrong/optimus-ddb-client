@@ -18,12 +18,12 @@ type ItemData = {
 }
 
 export class OptimusDdbClient {
-	#recordedItems: Map<any, ItemData>
+	#recordedItems: WeakMap<any, ItemData>
 	#ddbDocumentClient: DynamoDBDocumentClient
 	constructor(props?: {
 		dynamoDbClientConfig?: DynamoDBClientConfig
 	}) {
-		this.#recordedItems = new Map()
+		this.#recordedItems = new WeakMap()
 		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...props?.dynamoDbClientConfig}))
 	}
 
