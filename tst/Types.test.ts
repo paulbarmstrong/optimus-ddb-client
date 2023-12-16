@@ -14,4 +14,3 @@ describe("AnyToNever", () => {
 		const assertion: AssertEqual<AnyToNever<{ id: string }>, { id: string }> = true
 	})
 })
-

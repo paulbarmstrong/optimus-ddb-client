@@ -24,7 +24,11 @@ export class OptimusDdbClient {
 		dynamoDbClientConfig?: DynamoDBClientConfig
 	}) {
 		this.#recordedItems = new WeakMap()
-		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...props?.dynamoDbClientConfig}))
+		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...props?.dynamoDbClientConfig}), {
+			marshallOptions: {
+				removeUndefinedValues: true
+			}
+		})
 	}
 
 	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
@@ -167,9 +171,6 @@ export class OptimusDdbClient {
 			if (Object.keys(itemData.key).filter(attrName => item[attrName] !== itemData.key[attrName]).length > 0)
 				throw new Error(`Item key changes aren't supported. key: ${JSON.stringify(itemData.key)}, item: ${JSON.stringify(item)}`)
 			validateObjectShape({ object: item, shape: itemData.table.itemShape })
-			Object.keys(item).forEach(key => {
-				if (item[key] === undefined) delete item[key]
-			})
 			if (itemData.delete) {
 				return {
 					Delete: {

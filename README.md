@@ -4,11 +4,11 @@
 Please note this package is still experimental so breaking changes may be made without notice.
 
 ### About
-Optimus is a high level TypeScript/JavaScript DynamoDB client focused on strong typing and transactional consistency.
+OptimusDdbClient is a high level TypeScript/JavaScript DynamoDB client focused on strong typing and transactional consistency.
 
-Consumers specify the indexes of their tables and the shapes of items in their tables. Optimus uses those specifications to provide the strongest possible typing for operations on those tables. All items, key parameters, and query expressions are fully typed for each table's specific indexes and items.
+Consumers specify the indexes of their tables and the shapes of items in their tables. OptimusDdbClient uses those specifications to provide the strongest possible typing for operations on those tables. All items, key parameters, and query expressions are fully typed for each table's specific indexes and items.
 
-Optimus provides a high level abstraction for DynamoDB transactions with optimistic locking. An abstracted version number attribute facilitates optimistic locking. When consumers commit their changes Optimus does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and Optimus throws an error.
+An abstracted version number attribute facilitates optimistic locking. When consumers commit their changes OptimusDdbClient does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and Optimus throws an error.
 
 ### Installation
 ```
