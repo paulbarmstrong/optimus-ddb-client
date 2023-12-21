@@ -2,7 +2,8 @@ import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { Connection, Resource, connectionsTable, resourcesTable } from "../../test-utilities/Constants"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { OptimisticLockError, Table } from "../../../src"
-import { s } from "shape-tape"
+import { GenericReason, s } from "shape-tape"
+import { ItemShapeValidationError } from "../../../src/Types"
 
 test("create, update, then delete", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([connectionsTable], [])
@@ -367,4 +368,18 @@ test("undefined members", async () => {
 		comments: [ { id: "4567" } ],
 		version: 0
 	})
+})
+
+test("change that violates the shape", async () => {
+	const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
+	await ddbDocumentClient.send(new PutCommand({
+		TableName: "Resources",
+		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 }
+	}))
+	const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
+	resource.status = "starting" as any
+	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(new ItemShapeValidationError({
+		path: ["status"],
+		reason: new GenericReason()
+	}))
 })

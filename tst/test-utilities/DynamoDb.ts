@@ -14,7 +14,7 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 	}))
 	await Promise.all(tables.map(async table => {
 		const tableGsis = gsis.filter(gsi => gsi.table.tableName === table.tableName)
-		const itemShapeDictionary = table.itemShape.dictionary()
+		const itemShapeDictionary = table.itemShape.dictionary
 		const globalSecondaryIndexes = tableGsis.map(gsi => {
 			return {
 				IndexName: gsi.indexName,

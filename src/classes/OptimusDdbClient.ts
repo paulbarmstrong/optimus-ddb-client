@@ -2,7 +2,7 @@ import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } fr
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
-import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, OptimisticLockError, PartitionKeyCondition,
+import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError, PartitionKeyCondition,
 	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
@@ -50,9 +50,9 @@ export class OptimusDdbClient {
 		}))).Item
 		if (item === undefined) {
 			const error = props.itemNotFoundErrorOverride ? (
-				props.itemNotFoundErrorOverride(new ItemNotFoundError([props.key]))
+				props.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: [props.key] }))
 			) : (
-				new ItemNotFoundError([props.key])
+				new ItemNotFoundError({ itemKeys: [props.key] })
 			)
 			if (error instanceof Error) {
 				throw error
@@ -80,15 +80,15 @@ export class OptimusDdbClient {
 		}))
 		const items = res.Responses![props.table.tableName]
 		if (res.UnprocessedKeys && Object.values(res.UnprocessedKeys).length > 0)
-			throw new UnprocessedKeysError(Object.values(res.UnprocessedKeys).map(x => x.Keys!))
+			throw new UnprocessedKeysError({ unprocessedKeys: Object.values(res.UnprocessedKeys).map(x => x.Keys!) })
 		if (items.length !== props.keys.length) {
 			const unfoundItemKeys = props.keys.filter(key => !items.find(item => {
 				return Object.entries(key).filter(keyAttr => item[keyAttr[0]] === keyAttr[1]).length === Object.entries(key).length
 			}))
 			const error = props.itemNotFoundErrorOverride ? (
-				props.itemNotFoundErrorOverride(new ItemNotFoundError(unfoundItemKeys))
+				props.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: unfoundItemKeys }))
 			) : (
-				new ItemNotFoundError(unfoundItemKeys)
+				new ItemNotFoundError({ itemKeys: unfoundItemKeys })
 			)
 			if (error instanceof Error) {
 				throw error
@@ -170,7 +170,11 @@ export class OptimusDdbClient {
 			const itemData = this.#recordedItems.get(item)!
 			if (Object.keys(itemData.key).filter(attrName => item[attrName] !== itemData.key[attrName]).length > 0)
 				throw new Error(`Item key changes aren't supported. key: ${JSON.stringify(itemData.key)}, item: ${JSON.stringify(item)}`)
-			validateObjectShape({ object: item, shape: itemData.table.itemShape })
+			validateObjectShape({
+				object: item,
+				shape: itemData.table.itemShape,
+				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
+			})
 			if (itemData.delete) {
 				return {
 					Delete: {
@@ -252,7 +256,11 @@ export class OptimusDdbClient {
 		if (!create && !Number.isInteger(item.version)) throw new Error(`Item must have verison: ${JSON.stringify(item)}`)
 		const version = create ? 0 : item.version
 		delete item.version
-		const validatedItem: ShapeToType<typeof table.itemShape> = validateObjectShape({ object: item, shape: table.itemShape })
+		const validatedItem: ShapeToType<typeof table.itemShape> = validateObjectShape({
+			object: item,
+			shape: table.itemShape,
+			shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
+		})
 		this.#recordedItems.set(item, {
 			table: table,
 			key: Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]])),

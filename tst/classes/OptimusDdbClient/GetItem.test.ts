@@ -2,7 +2,8 @@ import { PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { Connection, MyError, Resource, connectionsTable, resourcesTable } from "../../test-utilities/Constants"
 import { ItemNotFoundError } from "../../../src"
-import { ShapeValidationError } from "shape-tape"
+import { ItemShapeValidationError } from "../../../src/Types"
+import { GenericReason } from "shape-tape"
 
 describe("non-existent item", () => {
 	test("table without sort key", async () => {
@@ -77,7 +78,10 @@ test("item doesn't match shape", async () => {
 		TableName: "Resources",
 		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, score: 2322, version: 10 }
 	}))
-	expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(ShapeValidationError)
+	expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(new ItemShapeValidationError({
+		path: ["score"],
+		reason: new GenericReason()
+	}))
 })
 
 test("item doesn't have version", async () => {

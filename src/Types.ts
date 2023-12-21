@@ -1,4 +1,4 @@
-import { Shape, ShapeToType } from "shape-tape"
+import { Shape, ShapeToType, ShapeValidationError, ShapeValidationErrorReason } from "shape-tape"
 import { s } from "./Utilities"
 
 export type ShapeDictionary = { [key: string]: Shape }
@@ -38,29 +38,47 @@ export type FilterCondition<L, R> = [L, "exists" | "doesn't exist"] | (R extends
 export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exist"]
 
 export class UnprocessedKeysError extends Error {
-	unprocessedKeys: Array<Record<string,any>>
-	constructor(unprocessedKeys: Array<Record<string,any>>) {
-		super(`Error processing ${unprocessedKeys} keys.`)
-		this.unprocessedKeys = unprocessedKeys
+	name = "ItemNotFoundError"
+	readonly unprocessedKeys: Array<Record<string,any>>
+	constructor(props: { unprocessedKeys: Array<Record<string,any>> }) {
+		super(`Error processing ${props.unprocessedKeys} keys.`)
+		this.unprocessedKeys = props.unprocessedKeys
 	}
 }
 
 export class ItemNotFoundError extends Error {
-	itemKeys: Array<Record<string,any>>
-	constructor(itemKeys: Array<Record<string,any>>) {
-		super(`${itemKeys.length} item${s(itemKeys.length)} not found.`)
-		this.itemKeys = itemKeys
+	name = "ItemNotFoundError"
+	readonly itemKeys: Array<Record<string,any>>
+	constructor(props: { itemKeys: Array<Record<string,any>> }) {
+		super(`${props.itemKeys.length} item${s(props.itemKeys.length)} not found.`)
+		this.itemKeys = props.itemKeys
 	}
 }
 
 export class OptimisticLockError extends Error {
-	constructor(message = "Optimistic lock error.") {
-		super(message)
+	name = "OptimisticLockError"
+	constructor() {
+		super("Optimistic lock error.")
 	}
 }
 
 export class InvalidNextTokenError extends Error {
-	constructor(message = "Invalid nextToken.") {
-		super(message)
+	name = "InvalidNextTokenError"
+	constructor() {
+		super("Invalid nextToken.")
+	}
+}
+
+export class InvalideNextTokenError extends InvalidNextTokenError {
+	name = "InvalidNextTokenErroer"
+}
+
+export class ItemShapeValidationError extends ShapeValidationError {
+	name = "ItemShapeValidationError"
+	constructor(props: {
+		path: Array<string | number>,
+		reason: ShapeValidationErrorReason
+	}) {
+		super(props)
 	}
 }

@@ -25,7 +25,7 @@ describe("one of requested item doesn't exist", () => {
 		await expect(optimus.getItems({
 			table: resourcesTable,
 			keys: [{ id: "abcd" }, { id: "abce" }]
-		})).rejects.toThrow(new ItemNotFoundError([{ id: "abce" }]))
+		})).rejects.toThrow(new ItemNotFoundError({ itemKeys: [{ id: "abce" }] }))
 	})
 
 	test("itemNotFoundErrorOverride overridden to MyError", async () => {

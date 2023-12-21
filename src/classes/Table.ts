@@ -19,7 +19,7 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 		this.itemShape = props.itemShape
 		this.partitionKey = props.partitionKey
 		this.sortKey = props.sortKey
-		this.attributes = props.itemShape.keys()
+		this.attributes = Object.keys(props.itemShape.dictionary)
 		this.keyAttributes = [
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])

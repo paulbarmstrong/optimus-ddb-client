@@ -100,17 +100,17 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 
 export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
 	return sh.dictionary({
-		[index.table.partitionKey]: index.table.itemShape.dictionary()[index.table.partitionKey],
+		[index.table.partitionKey]: index.table.itemShape.dictionary[index.table.partitionKey],
 		...(index.table.sortKey ? (
-			{ [index.table.sortKey]: index.table.itemShape.dictionary()[index.table.sortKey] }
+			{ [index.table.sortKey]: index.table.itemShape.dictionary[index.table.sortKey] }
 		) : (
 			{}
 		)),
 		...(index instanceof Gsi ? (
 			{
-				[index.partitionKey]: index.table.itemShape.dictionary()[index.partitionKey],
+				[index.partitionKey]: index.table.itemShape.dictionary[index.partitionKey],
 				...(index.sortKey ? (
-					{ [index.sortKey]: index.table.itemShape.dictionary()[index.sortKey] }
+					{ [index.sortKey]: index.table.itemShape.dictionary[index.sortKey] }
 				) : (
 					{}
 				))
