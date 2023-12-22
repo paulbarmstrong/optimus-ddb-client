@@ -20,11 +20,11 @@ export function getDynamoDbExpression(props: {
 	const keyConditionExpression = keyConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
-	const filterConditions = props.filterConditions ? props.filterConditions : []
+	const filterConditions = props.filterConditions !== undefined ? props.filterConditions : []
 	const filterConditionExpression = filterConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
-	const conditionConditions = props.conditionConditions ? props.conditionConditions : []
+	const conditionConditions = props.conditionConditions !== undefined ? props.conditionConditions : []
 	const conditionConditionExpression = conditionConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
@@ -101,7 +101,7 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
 	return sh.dictionary({
 		[index.table.partitionKey]: index.table.itemShape.dictionary[index.table.partitionKey],
-		...(index.table.sortKey ? (
+		...(index.table.sortKey !== undefined ? (
 			{ [index.table.sortKey]: index.table.itemShape.dictionary[index.table.sortKey] }
 		) : (
 			{}
@@ -109,7 +109,7 @@ export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any
 		...(index instanceof Gsi ? (
 			{
 				[index.partitionKey]: index.table.itemShape.dictionary[index.partitionKey],
-				...(index.sortKey ? (
+				...(index.sortKey !== undefined ? (
 					{ [index.sortKey]: index.table.itemShape.dictionary[index.sortKey] }
 				) : (
 					{}
@@ -126,7 +126,7 @@ export async function getItemsFromPaginator(paginator: Paginator<QueryCommandOut
 	const items: Array<Record<string, any>> = []
 	for await (const page of paginator) {
 		items.push(...page.Items!)
-		if (limit && items.length >= limit) {
+		if (limit !== undefined && items.length >= limit) {
 			return [items.slice(0, limit), page.LastEvaluatedKey]
 		}
 	}
@@ -146,7 +146,7 @@ export async function getItemsPages(props: {
 		const res = await props.get({
 			...props.params,
 			ExclusiveStartKey: lastEvaluatedKey,
-			Limit: props.limit ? props.limit - items.length : undefined
+			Limit: props.limit !== undefined ? props.limit - items.length : undefined
 		})
 		items.push(...res.Items!)
 		lastEvaluatedKey = res.LastEvaluatedKey
@@ -154,6 +154,6 @@ export async function getItemsPages(props: {
 	return [items, lastEvaluatedKey]
 }
 
-export function s(num: number) {
+export function plurality(num: number) {
 	return num === 1 ? "" : "s"
 }

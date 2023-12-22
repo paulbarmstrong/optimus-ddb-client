@@ -1,5 +1,5 @@
 import { Shape, ShapeToType, ShapeValidationError, ShapeValidationErrorReason } from "shape-tape"
-import { s } from "./Utilities"
+import { plurality } from "./Utilities"
 
 export type ShapeDictionary = { [key: string]: Shape }
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
@@ -50,7 +50,7 @@ export class ItemNotFoundError extends Error {
 	name = "ItemNotFoundError"
 	readonly itemKeys: Array<Record<string,any>>
 	constructor(props: { itemKeys: Array<Record<string,any>> }) {
-		super(`${props.itemKeys.length} item${s(props.itemKeys.length)} not found.`)
+		super(`${props.itemKeys.length} item${plurality(props.itemKeys.length)} not found.`)
 		this.itemKeys = props.itemKeys
 	}
 }
@@ -67,10 +67,6 @@ export class InvalidNextTokenError extends Error {
 	constructor() {
 		super("Invalid nextToken.")
 	}
-}
-
-export class InvalideNextTokenError extends InvalidNextTokenError {
-	name = "InvalidNextTokenErroer"
 }
 
 export class ItemShapeValidationError extends ShapeValidationError {

@@ -2,8 +2,8 @@ import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } fr
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
-import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError, PartitionKeyCondition,
-	ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
+import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
+	PartitionKeyCondition, ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
@@ -49,7 +49,7 @@ export class OptimusDdbClient {
 			ConsistentRead: true
 		}))).Item
 		if (item === undefined) {
-			const error = props.itemNotFoundErrorOverride ? (
+			const error = props.itemNotFoundErrorOverride !== undefined ? (
 				props.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: [props.key] }))
 			) : (
 				new ItemNotFoundError({ itemKeys: [props.key] })
@@ -85,7 +85,7 @@ export class OptimusDdbClient {
 			const unfoundItemKeys = props.keys.filter(key => !items.find(item => {
 				return Object.entries(key).filter(keyAttr => item[keyAttr[0]] === keyAttr[1]).length === Object.entries(key).length
 			}))
-			const error = props.itemNotFoundErrorOverride ? (
+			const error = props.itemNotFoundErrorOverride !== undefined ? (
 				props.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: unfoundItemKeys }))
 			) : (
 				new ItemNotFoundError({ itemKeys: unfoundItemKeys })
@@ -114,7 +114,7 @@ export class OptimusDdbClient {
 			...getDynamoDbExpression({
 				partitionKeyCondition: props.partitionKeyCondition,
 				sortKeyCondition: props.sortKeyCondition,
-				filterConditions: props.filterConditions ? props.filterConditions : []
+				filterConditions: props.filterConditions !== undefined ? props.filterConditions : []
 			}),
 			ScanIndexForward: props.scanIndexForward
 		}
@@ -143,7 +143,7 @@ export class OptimusDdbClient {
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
 			ConsistentRead: props.index instanceof Table,
 			...getDynamoDbExpression({
-				filterConditions: props.filterConditions ? props.filterConditions : []
+				filterConditions: props.filterConditions !== undefined ? props.filterConditions : []
 			})
 		}
 		const [items, lastEvaluatedKey] = await getItemsPages({
@@ -166,7 +166,6 @@ export class OptimusDdbClient {
 		if (props.items.length === 0) return
 		const transactItems = props.items.map(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
-			if (item.version !== undefined) throw new Error(`Item contains illegal version attribute: ${JSON.stringify(item)}`)
 			const itemData = this.#recordedItems.get(item)!
 			if (Object.keys(itemData.key).filter(attrName => item[attrName] !== itemData.key[attrName]).length > 0)
 				throw new Error(`Item key changes aren't supported. key: ${JSON.stringify(itemData.key)}, item: ${JSON.stringify(item)}`)
@@ -215,9 +214,9 @@ export class OptimusDdbClient {
 		} catch (error) {
 			if ((error as Error).name === "TransactionCanceledException") {
 				const exception = error as TransactionCanceledException
-				if (exception.CancellationReasons && exception.CancellationReasons
+				if (exception.CancellationReasons !== undefined && exception.CancellationReasons
 					.filter(reason => reason.Code === "ConditionalCheckFailed").length > 0) {
-					throw props.optimisticLockErrorOverride ? (
+					throw props.optimisticLockErrorOverride !== undefined ? (
 						props.optimisticLockErrorOverride(new OptimisticLockError())
 					) : (
 						new OptimisticLockError()

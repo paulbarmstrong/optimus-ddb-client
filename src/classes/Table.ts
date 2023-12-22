@@ -24,5 +24,10 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])
 		]
+		Object.keys(this.itemShape.dictionary).forEach(attributeName => {
+			if (attributeName === "version") {
+				throw new Error(`${this.table.tableName} table's item shape includes reserved attribute name "version".`)
+			}
+		})
 	}
 }
