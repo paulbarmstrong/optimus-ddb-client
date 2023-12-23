@@ -2,8 +2,7 @@ import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { Connection, Resource, connectionsTable, resourcesTable } from "../../test-utilities/Constants"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { OptimisticLockError, Table } from "../../../src"
-import { GenericReason, s } from "shape-tape"
-import { ItemShapeValidationError } from "../../../src/Types"
+import { s } from "shape-tape"
 
 test("create, update, then delete", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([connectionsTable], [])
@@ -378,8 +377,5 @@ test("change that violates the shape", async () => {
 	}))
 	const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
 	resource.status = "starting" as any
-	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(new ItemShapeValidationError({
-		path: ["status"],
-		reason: new GenericReason()
-	}))
+	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow("Parameter \"status\" is invalid.")
 })

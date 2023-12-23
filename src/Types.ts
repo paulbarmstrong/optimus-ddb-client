@@ -1,4 +1,4 @@
-import { Shape, ShapeToType, ShapeValidationError, ShapeValidationErrorReason } from "shape-tape"
+import { Shape, ShapeToType, ShapeValidationError } from "shape-tape"
 import { plurality } from "./Utilities"
 
 export type ShapeDictionary = { [key: string]: Shape }
@@ -71,10 +71,7 @@ export class InvalidNextTokenError extends Error {
 
 export class ItemShapeValidationError extends ShapeValidationError {
 	name = "ItemShapeValidationError"
-	constructor(props: {
-		path: Array<string | number>,
-		reason: ShapeValidationErrorReason
-	}) {
+	constructor(props: ConstructorParameters<typeof ShapeValidationError>[0]) {
 		super(props)
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"name": "optimus-ddb-client",
-	"version": "1.0.31",
+	"version": "1.0.32",
 	"main": "dist/src/index",
 	"typings": "dist/src/index",
 	"scripts": {
@@ -21,7 +21,7 @@
 		"ts-jest": "^29.1.1"
 	},
 	"peerDependencies": {
-		"shape-tape": "^1.0.14"
+		"shape-tape": "^1.0.15"
 	},
 	"dependencies": {
 		"@aws-sdk/client-dynamodb": "^3.465.0",
