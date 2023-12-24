@@ -11,7 +11,7 @@ import { Gsi } from "./Gsi"
 
 type ItemData = {
 	table: Table<any, any, any>,
-	key: Record<string, any>,
+	existingKey: Record<string, any>,
 	version: number,
 	delete: boolean,
 	create: boolean
@@ -167,18 +167,18 @@ export class OptimusDdbClient {
 		const transactItems = props.items.map(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
 			const itemData = this.#recordedItems.get(item)!
-			if (Object.keys(itemData.key).filter(attrName => item[attrName] !== itemData.key[attrName]).length > 0)
-				throw new Error(`Item key changes aren't supported. key: ${JSON.stringify(itemData.key)}, item: ${JSON.stringify(item)}`)
 			validateObjectShape({
 				object: item,
 				shape: itemData.table.itemShape,
 				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 			})
+			const keyChanged: boolean = itemData.table.keyAttributes
+				.filter(keyAttr => itemData.existingKey[keyAttr] !== item[keyAttr]).length > 0
 			if (itemData.delete) {
-				return {
+				return [{
 					Delete: {
 						TableName: itemData.table.tableName,
-						Key: itemData.key,
+						Key: itemData.existingKey,
 						...getDynamoDbExpression({
 							conditionConditions: [
 								["version", "exists"],
@@ -186,9 +186,9 @@ export class OptimusDdbClient {
 							]
 						})
 					}
-				}
+				}]
 			} else if (itemData.create) {
-				return {
+				return [{
 					Put: {
 						TableName: itemData.table.tableName,
 						Item: { ...item, version: itemData.version },
@@ -196,17 +196,40 @@ export class OptimusDdbClient {
 							conditionConditions: [[itemData.table.partitionKey, "doesn't exist"]]
 						})
 					}
-				}
+				}]
+			} else if (keyChanged) {
+				return [
+					{
+						Put: {
+							TableName: itemData.table.tableName,
+							Item: { ...item, version: itemData.version+1 },
+							...getDynamoDbExpression({
+								conditionConditions: [[itemData.table.partitionKey, "doesn't exist"]]
+							})
+						}
+					}, {
+						Delete: {
+							TableName: itemData.table.tableName,
+							Key: itemData.existingKey,
+							...getDynamoDbExpression({
+								conditionConditions: [
+									["version", "exists"],
+									["version", "=", itemData.version]
+								]
+							})
+						}
+					}
+				]
 			} else {
-				return {
+				return [{
 					Update: {
 						TableName: itemData.table.tableName,
-						Key: itemData.key,
+						Key: itemData.existingKey,
 						...this.#getUpdateDynamoDbExpression(item, itemData)
 					}
-				}
+				}]
 			}
-		})
+		}).flat()
 		try {
 			await this.#ddbDocumentClient.send(new TransactWriteCommand({
 				TransactItems: transactItems
@@ -222,7 +245,7 @@ export class OptimusDdbClient {
 						new OptimisticLockError()
 					)
 				} else {
-					throw new Error(`TransactionCanceledException due to: ${JSON.stringify(exception.CancellationReasons)}`)
+					throw error
 				}
 			} else {
 				throw error
@@ -235,6 +258,7 @@ export class OptimusDdbClient {
 			} else {
 				itemData.version = itemData.version + 1
 			}
+			itemData.existingKey = Object.fromEntries(itemData.table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]]))
 			if (itemData.delete) this.#recordedItems.delete(item)
 		})
 	}
@@ -262,7 +286,7 @@ export class OptimusDdbClient {
 		})
 		this.#recordedItems.set(item, {
 			table: table,
-			key: Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]])),
+			existingKey: Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]])),
 			version: version,
 			delete: false,
 			create: create

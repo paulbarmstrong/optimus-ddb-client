@@ -3,6 +3,7 @@ import { Connection, Resource, connectionsTable, resourcesTable } from "../../te
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { OptimisticLockError, Table } from "../../../src"
 import { s } from "shape-tape"
+import { PutItemCommand } from "@aws-sdk/client-dynamodb"
 
 test("create, update, then delete", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([connectionsTable], [])
@@ -379,3 +380,77 @@ test("change that violates the shape", async () => {
 	resource.status = "starting" as any
 	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow("Parameter \"status\" is invalid.")
 })
+
+describe("change item key", () => {
+	test("normal case", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Resources",
+			Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 }
+		}))
+		const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
+
+		resource.id = "ffff"
+		await optimus.commitItems({ items: [resource] })
+
+		let bbbbItem = (await ddbDocumentClient.send(new GetCommand({
+			TableName: "Resources",
+			Key: { id: "bbbb" }
+		}))).Item
+		let ffffItem = (await ddbDocumentClient.send(new GetCommand({
+			TableName: "Resources",
+			Key: { id: "ffff" }
+		}))).Item
+		expect(bbbbItem).toBeUndefined()
+		expect(ffffItem).toStrictEqual({ id: "ffff", status: "available", updatedAt: 1702172261700, version: 11 })
+
+		resource.status = "deleted"
+		await optimus.commitItems({ items: [resource] })
+
+		bbbbItem = (await ddbDocumentClient.send(new GetCommand({
+			TableName: "Resources",
+			Key: { id: "bbbb" }
+		}))).Item
+		ffffItem = (await ddbDocumentClient.send(new GetCommand({
+			TableName: "Resources",
+			Key: { id: "ffff" }
+		}))).Item
+		expect(bbbbItem).toBeUndefined()
+		expect(ffffItem).toStrictEqual({ id: "ffff", status: "deleted", updatedAt: 1702172261700, version: 12 })
+	})
+
+	test("item with new key already exists", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Resources",
+			Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Resources",
+			Item: { id: "ffff", status: "deleted", updatedAt: 1702172261700, version: 11 }
+		}))
+
+		const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
+		resource.id = "ffff"
+		expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
+	})
+
+	test("item was updated in the mean time", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Resources",
+			Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 },
+		}))
+		const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
+
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Resources",
+			Item: { id: "bbbb", status: "deleted", updatedAt: 1702172261700, version: 11 },
+		}))
+
+		resource.id = "ffff"
+		expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
+	})
+})
+
+
