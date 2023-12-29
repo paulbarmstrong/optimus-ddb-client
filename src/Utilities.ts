@@ -1,7 +1,7 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
 import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, ShapeDictionary, SortKeyCondition } from "./Types"
-import { Shape, ShapeToType, s as sh, validateObjectShape }  from "shape-tape"
+import { Shape, ShapeToType, s, validateDataShape }  from "shape-tape"
 import { Paginator, QueryCommandInput, QueryCommandOutput, ScanCommandInput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
@@ -85,8 +85,8 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 		: ShapeToType<typeof keyShape> | undefined {
 	if (nextToken === undefined) return undefined
 	try {
-		return validateObjectShape({
-			object: JSON.parse(Buffer.from(nextToken, "base64").toString()),
+		return validateDataShape({
+			data: JSON.parse(Buffer.from(nextToken, "base64").toString()),
 			shape: keyShape
 		})
 	} catch (error) {
@@ -100,18 +100,18 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 
 export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
 	const table = getIndexTable(index)
-	return sh.dictionary({
-		[table.partitionKey]: table.itemShape.dictionary[table.partitionKey],
+	return s.object({
+		[table.partitionKey]: table.itemShape.object[table.partitionKey],
 		...(table.sortKey !== undefined ? (
-			{ [table.sortKey]: table.itemShape.dictionary[table.sortKey] }
+			{ [table.sortKey]: table.itemShape.object[table.sortKey] }
 		) : (
 			{}
 		)),
 		...(index instanceof Gsi ? (
 			{
-				[index.partitionKey]: index.table.itemShape.dictionary[index.partitionKey],
+				[index.partitionKey]: index.table.itemShape.object[index.partitionKey],
 				...(index.sortKey !== undefined ? (
-					{ [index.sortKey]: index.table.itemShape.dictionary[index.sortKey] }
+					{ [index.sortKey]: index.table.itemShape.object[index.sortKey] }
 				) : (
 					{}
 				))

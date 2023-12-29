@@ -5,7 +5,7 @@ test("with version attribute", () => {
 	expect(() => {
 		const fruitTable = new Table({
 			tableName: "Fruit",
-			itemShape: s.dictionary({
+			itemShape: s.object({
 				id: s.string(),
 				state: s.union([s.literal("available"), s.literal("deleted")]),
 				version: s.number()

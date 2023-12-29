@@ -14,7 +14,7 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 	}))
 	await Promise.all(tables.map(async table => {
 		const tableGsis = gsis.filter(gsi => gsi.table.tableName === table.tableName)
-		const itemShapeDictionary = table.itemShape.dictionary
+		const itemShapeObject = table.itemShape.object
 		const globalSecondaryIndexes = tableGsis.map(gsi => {
 			return {
 				IndexName: gsi.indexName,
@@ -33,7 +33,7 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 			BillingMode: "PAY_PER_REQUEST",
 			AttributeDefinitions: [...new Set(attributeNames)].map(attributeName => ({
 				AttributeName: attributeName,
-				AttributeType: shapeToDdbAttributeType(itemShapeDictionary[attributeName] as any)
+				AttributeType: shapeToDdbAttributeType(itemShapeObject[attributeName] as any)
 			})),
 			KeySchema: [
 				{ AttributeName: table.partitionKey, KeyType: "HASH" as "HASH" },

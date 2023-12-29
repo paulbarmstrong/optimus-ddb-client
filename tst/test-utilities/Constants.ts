@@ -14,7 +14,7 @@ export const DYNAMO_DB_LOCAL_CLIENT_CONFIG: DynamoDBClientConfig = {
 
 export class MyError extends Error {}
 
-export const resourceShape = s.dictionary({
+export const resourceShape = s.object({
 	id: s.string(),
 	status: s.union([s.literal("available"), s.literal("deleted")]),
 	updatedAt: s.integer()
@@ -26,7 +26,7 @@ export const resourcesTable = new Table({
 	partitionKey: "id"
 })
 
-export const connectionShape = s.dictionary({
+export const connectionShape = s.object({
 	id: s.string(),
 	resourceId: s.string(),
 	updatedAt: s.integer(),

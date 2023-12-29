@@ -242,7 +242,7 @@ test("README example", async () => {
 	// Create Table class instances based on your DynamoDB tables.
 	const blogPostsTable = new Table({
 		tableName: "BlogPosts",
-		itemShape: s.dictionary({
+		itemShape: s.object({
 			id: s.string(),
 			name: s.string(),
 			content: s.string(),
@@ -252,7 +252,7 @@ test("README example", async () => {
 	})
 	const commentsTable = new Table({
 		tableName: "Comments",
-		itemShape: s.dictionary({
+		itemShape: s.object({
 			blogPostId: s.string(),
 			id: s.string(),
 			content: s.string()
@@ -333,11 +333,11 @@ test("README example", async () => {
 test("undefined members", async () => {
 	const ticketsTable = new Table({
 		tableName: "Tickets",
-		itemShape: s.dictionary({
+		itemShape: s.object({
 			id: s.string(),
 			title: s.string(),
 			content: s.optional(s.string()),
-			comments: s.array(s.dictionary({
+			comments: s.array(s.object({
 				id: s.string(),
 				name: s.optional(s.string())
 			}))
@@ -452,5 +452,3 @@ describe("change item key", () => {
 		expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
 	})
 })
-
-

@@ -1,7 +1,7 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
-import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
+import { ObjectShape, ShapeToType, validateDataShape } from "shape-tape"
 import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
 	PartitionKeyCondition, ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
@@ -42,7 +42,7 @@ export class OptimusDdbClient {
 		table: Table<I,P,S>,
 		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => E
-	}): Promise<E extends Error ? ShapeToType<DictionaryShape<I>> : ShapeToType<DictionaryShape<I>> | undefined> {
+	}): Promise<E extends Error ? ShapeToType<ObjectShape<I>> : ShapeToType<ObjectShape<I>> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: params.table.tableName,
 			Key: params.key,
@@ -57,7 +57,7 @@ export class OptimusDdbClient {
 			if (error instanceof Error) {
 				throw error
 			} else {
-				return undefined as E extends Error ? ShapeToType<DictionaryShape<I>> : ShapeToType<DictionaryShape<I>> | undefined
+				return undefined as E extends Error ? ShapeToType<ObjectShape<I>> : ShapeToType<ObjectShape<I>> | undefined
 			}
 		} else {
 			return this.#recordAndStripItem(item, params.table, false) as ShapeToType<typeof params.table.itemShape>
@@ -68,7 +68,7 @@ export class OptimusDdbClient {
 		table: Table<I,P,S>,
 		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
-	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
+	}): Promise<Array<ShapeToType<ObjectShape<I>>>> {
 		if (params.keys.length === 0) return []
 		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
 			RequestItems: {
@@ -106,7 +106,7 @@ export class OptimusDdbClient {
 		limit?: L,
 		nextToken?: string,
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
-	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<ShapeToType<ObjectShape<I>>>, L extends number ? string | undefined : undefined]> {
 		const queryCommandInput: QueryCommandInput = {
 			TableName: getIndexTable(params.index).tableName,
 			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
@@ -137,7 +137,7 @@ export class OptimusDdbClient {
 		limit?: L,
 		nextToken?: string,
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
-	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<ShapeToType<ObjectShape<I>>>, L extends number ? string | undefined : undefined]> {
 		const scanCommandInput: ScanCommandInput = {
 			TableName: getIndexTable(params.index).tableName,
 			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
@@ -167,8 +167,8 @@ export class OptimusDdbClient {
 		const transactItems = params.items.map(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
 			const itemData = this.#recordedItems.get(item)!
-			validateObjectShape({
-				object: item,
+			validateDataShape({
+				data: item,
 				shape: itemData.table.itemShape,
 				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 			})
@@ -279,8 +279,8 @@ export class OptimusDdbClient {
 		if (!create && !Number.isInteger(item.version)) throw new Error(`Item must have verison: ${JSON.stringify(item)}`)
 		const version = create ? 0 : item.version
 		delete item.version
-		const validatedItem: ShapeToType<typeof table.itemShape> = validateObjectShape({
-			object: item,
+		const validatedItem: ShapeToType<typeof table.itemShape> = validateDataShape({
+			data: item,
 			shape: table.itemShape,
 			shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 		})
@@ -294,7 +294,7 @@ export class OptimusDdbClient {
 		return validatedItem
 	}
 	#getUpdateDynamoDbExpression<I extends ShapeDictionary>
-			(item: ShapeToType<DictionaryShape<I>>, itemData: ItemData) {
+			(item: ShapeToType<ObjectShape<I>>, itemData: ItemData) {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
 		const set = itemData.table.attributes
 			.filter(key => item[key as string] !== undefined && !itemData.table.keyAttributes.includes(key as string))

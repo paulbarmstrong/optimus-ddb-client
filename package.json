@@ -21,7 +21,7 @@
 		"ts-jest": "^29.1.1"
 	},
 	"peerDependencies": {
-		"shape-tape": "^1.0.15"
+		"shape-tape": "^1.0.17"
 	},
 	"dependencies": {
 		"@aws-sdk/client-dynamodb": "^3.465.0",
