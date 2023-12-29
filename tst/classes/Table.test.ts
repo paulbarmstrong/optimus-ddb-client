@@ -1,7 +1,49 @@
 import { s } from "shape-tape"
 import { Table } from "../../src"
 
-test("with version attribute", () => {
+const fruitShape = s.object({
+	id: s.string(),
+	state: s.union([s.literal("available"), s.literal("deleted")])
+})
+
+test("regular table", () => {
+	const fruitTable = new Table({
+		tableName: "Fruit",
+		itemShape: fruitShape,
+		partitionKey: "id"
+	})
+	expect(fruitTable.attributes).toStrictEqual(["id", "state"])
+	expect(fruitTable.itemShape).toStrictEqual(fruitShape)
+	expect(fruitTable.keyAttributes).toStrictEqual(["id"])
+	expect(fruitTable.partitionKey).toStrictEqual("id")
+	expect(fruitTable.sortKey).toBeUndefined()
+	expect(fruitTable.tableName).toStrictEqual("Fruit")
+	expect(fruitTable.versionAttribute).toStrictEqual("version")
+})
+
+test("table with sort key and custom version attribute", () => {
+	const documentShape = s.object({
+		userId: s.string(),
+		id: s.string(),
+		text: s.string()
+	})
+	const documentsTable = new Table({
+		tableName: "Documents",
+		itemShape: documentShape,
+		partitionKey: "userId",
+		sortKey: "id",
+		versionAttribute: "_version"
+	})
+	expect(documentsTable.attributes).toStrictEqual(["userId", "id", "text"])
+	expect(documentsTable.itemShape).toStrictEqual(documentShape)
+	expect(documentsTable.keyAttributes).toStrictEqual(["userId", "id"])
+	expect(documentsTable.partitionKey).toStrictEqual("userId")
+	expect(documentsTable.sortKey).toStrictEqual("id")
+	expect(documentsTable.tableName).toStrictEqual("Documents")
+	expect(documentsTable.versionAttribute).toStrictEqual("_version")
+})
+
+test("with shape including version attribute", () => {
 	expect(() => {
 		const fruitTable = new Table({
 			tableName: "Fruit",
@@ -12,5 +54,20 @@ test("with version attribute", () => {
 			}),
 			partitionKey: "id"
 		})
-	}).toThrow(new Error(`Fruit table's item shape includes reserved attribute name "version".`))
+	}).toThrow(new Error(`Fruit table's item shape includes reserved version attribute "version".`))
+})
+
+test("with shape including custom version attribute", () => {
+	expect(() => {
+		const fruitTable = new Table({
+			tableName: "Fruit",
+			itemShape: s.object({
+				id: s.string(),
+				state: s.union([s.literal("available"), s.literal("deleted")]),
+				optimisticLockVersion: s.number()
+			}),
+			partitionKey: "id",
+			versionAttribute: "optimisticLockVersion"
+		})
+	}).toThrow(new Error(`Fruit table's item shape includes reserved version attribute "optimisticLockVersion".`))
 })

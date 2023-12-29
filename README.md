@@ -8,7 +8,13 @@ OptimusDdbClient is a high level TypeScript/JavaScript DynamoDB client focused o
 
 Consumers specify the indexes of their tables and the shapes of items in their tables. OptimusDdbClient uses those specifications to provide the strongest possible typing for operations on those tables. All items, key parameters, and query expressions are fully typed for each table's specific indexes and items.
 
-An abstracted version number attribute facilitates optimistic locking. When consumers commit their changes OptimusDdbClient does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and Optimus throws an error.
+An abstracted version number attribute facilitates optimistic locking. When consumers commit their changes OptimusDdbClient does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and OptimusDdbClient throws an error.
+
+### Requirements
+
+Any existing items of tables to be used with OptimusDdbClient should have an N attribute to use for optimistic locking. It should be specified in the `Table` constructor's `versionAttribute` parameter. The default is "version".
+
+GSIs to be used with OptimusDdbClient should have all attributes projected.
 
 ### Installation
 ```
@@ -47,11 +53,11 @@ const optimus = new OptimusDdbClient()
 
 // Perform operations on items in those tables.
 // Example scenario - Handling an API request for adding a comment to a blog post:
-async function handleCreateBlogPostComment(props: { blogPostId: string, commentContent: string }) {
+async function handleCreateBlogPostComment(blogPostId, commentContent) {
 	// Get the blog post
 	const blogPost = await optimus.getItem({
 		table: blogPostsTable,
-		key: { id: body.blogPostId }
+		key: { id: blogPostId }
 	})
 
 	// Prepare a change to increase the blog post's numComments.
@@ -61,9 +67,9 @@ async function handleCreateBlogPostComment(props: { blogPostId: string, commentC
 	const comment = optimus.draftItem({
 		table: commentsTable,
 		item: {
-			blogPostId: body.blogPostId,
+			blogPostId: blogPostId,
 			id: crypto.randomUUID(),
-			content: body.commentContent
+			content: commentContent
 		}
 	})
 
@@ -81,7 +87,7 @@ import { ShapeToType } from "shape-tape"
 type BlogPost = ShapeToType<typeof blogPostsTable.itemShape>
 const blogPost: BlogPost = await optimus.getItem({
 	table: blogPostsTable,
-	Key: { id: blogPostId }
+	key: { id: blogPostId }
 })
 ```
 

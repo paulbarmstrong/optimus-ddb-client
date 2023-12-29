@@ -2,7 +2,7 @@ import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { Connection, Resource, connectionsTable, resourcesTable } from "../../test-utilities/Constants"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { OptimisticLockError, Table } from "../../../src"
-import { s } from "shape-tape"
+import { ShapeToType, s } from "shape-tape"
 import crypto from "crypto"
 
 test("create, update, then delete", async () => {
@@ -450,5 +450,76 @@ describe("change item key", () => {
 
 		resource.id = "ffff"
 		expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
+	})
+})
+
+describe("custom version attribute", () => {
+	const fruitTable = new Table({
+		tableName: "Fruit",
+		itemShape: s.object({
+			id: s.string(),
+			name: s.string(),
+			quantity: s.integer()
+		}),
+		partitionKey: "id",
+		versionAttribute: "_version"
+	})
+	type Fruit = ShapeToType<typeof fruitTable.itemShape>
+	test("create, update, then delete", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([fruitTable], [])
+		const apple: Fruit = optimus.draftItem({
+			table: fruitTable,
+			item: { id: "9495", name: "Apple", quantity: 10 }
+		})
+		await optimus.commitItems({ items: [apple] })
+		const getItemRes0 = await ddbDocumentClient.send(new GetCommand({
+			TableName: "Fruit",
+			Key: { id: "9495" },
+			ConsistentRead: true
+		}))
+		expect(getItemRes0.Item).toStrictEqual({
+			id: "9495",
+			name: "Apple",
+			quantity: 10,
+			"_version": 0
+		})
+		apple.quantity = 9
+		await optimus.commitItems({ items: [apple] })
+		const getItemRes1 = await ddbDocumentClient.send(new GetCommand({
+			TableName: "Fruit",
+			Key: { id: "9495" },
+			ConsistentRead: true
+		}))
+		expect(getItemRes1.Item).toStrictEqual({
+			id: "9495",
+			name: "Apple",
+			quantity: 9,
+			"_version": 1
+		})
+		optimus.markItemForDeletion({ item: apple })
+		await optimus.commitItems({ items: [apple] })
+		const getItemRes2 = await ddbDocumentClient.send(new GetCommand({
+			TableName: "Fruit",
+			Key: { id: "9495" },
+			ConsistentRead: true
+		}))
+		expect(getItemRes2.Item).toStrictEqual(undefined)
+	})
+	
+	test("update existing item", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([fruitTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Fruit",
+			Item: { id: "3001", name: "Banana", quantity: 0, "_version": 13 }
+		}))
+		const banana: Fruit = await optimus.getItem({ table: fruitTable, key: { id: "3001" } })
+		banana.quantity = 5
+		await optimus.commitItems({ items: [banana] })
+		const getItemRes = await ddbDocumentClient.send(new GetCommand({
+			TableName: "Fruit",
+			Key: { id: "3001" },
+			ConsistentRead: true
+		}))
+		expect(getItemRes.Item).toStrictEqual({ id: "3001", name: "Banana", quantity: 5, "_version": 14 })
 	})
 })

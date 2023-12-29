@@ -2,17 +2,19 @@ import { ObjectShape } from "shape-tape"
 import { ShapeDictionary } from "../Types"
 
 export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof I = never> {
-	tableName: string
-	itemShape: ObjectShape<I>
-	partitionKey: P
-	sortKey?: S
-	attributes: Array<keyof I>
-	keyAttributes: Array<string>
+	readonly tableName: string
+	readonly itemShape: ObjectShape<I>
+	readonly partitionKey: P
+	readonly sortKey?: S
+	readonly attributes: Array<keyof I>
+	readonly keyAttributes: Array<string>
+	readonly versionAttribute: string
 	constructor(params: {
 		tableName: string,
 		itemShape: ObjectShape<I>,
 		partitionKey: P,
-		sortKey?: S
+		sortKey?: S,
+		versionAttribute?: string
 	}) {
 		this.tableName = params.tableName
 		this.itemShape = params.itemShape
@@ -23,9 +25,13 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])
 		]
+		this.versionAttribute = params.versionAttribute !== undefined ? params.versionAttribute.toString() : "version"
 		Object.keys(this.itemShape.object).forEach(attributeName => {
-			if (attributeName === "version") {
-				throw new Error(`${this.tableName} table's item shape includes reserved attribute name "version".`)
+			if (attributeName === this.versionAttribute) {
+				throw new Error(`${this.tableName
+					} table's item shape includes reserved version attribute "${
+					this.versionAttribute.toString()}".`
+				)
 			}
 		})
 	}

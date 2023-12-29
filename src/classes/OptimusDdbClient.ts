@@ -1,10 +1,11 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
-import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
-	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
+import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, 
+	QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb"
 import { ObjectShape, ShapeToType, validateDataShape } from "shape-tape"
-import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
-	PartitionKeyCondition, ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
+import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, 
+	OptimisticLockError, PartitionKeyCondition, ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, 
+	getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -181,8 +182,7 @@ export class OptimusDdbClient {
 						Key: itemData.existingKey,
 						...getDynamoDbExpression({
 							conditionConditions: [
-								["version", "exists"],
-								["version", "=", itemData.version]
+								[itemData.table.versionAttribute, "=", itemData.version]
 							]
 						})
 					}
@@ -191,7 +191,7 @@ export class OptimusDdbClient {
 				return [{
 					Put: {
 						TableName: itemData.table.tableName,
-						Item: { ...item, version: itemData.version },
+						Item: { ...item, [itemData.table.versionAttribute]: itemData.version },
 						...getDynamoDbExpression({
 							conditionConditions: [[itemData.table.partitionKey, "doesn't exist"]]
 						})
@@ -202,7 +202,7 @@ export class OptimusDdbClient {
 					{
 						Put: {
 							TableName: itemData.table.tableName,
-							Item: { ...item, version: itemData.version+1 },
+							Item: { ...item, [itemData.table.versionAttribute]: itemData.version+1 },
 							...getDynamoDbExpression({
 								conditionConditions: [[itemData.table.partitionKey, "doesn't exist"]]
 							})
@@ -213,8 +213,7 @@ export class OptimusDdbClient {
 							Key: itemData.existingKey,
 							...getDynamoDbExpression({
 								conditionConditions: [
-									["version", "exists"],
-									["version", "=", itemData.version]
+									[itemData.table.versionAttribute, "=", itemData.version]
 								]
 							})
 						}
@@ -270,15 +269,18 @@ export class OptimusDdbClient {
 	}
 
 	getItemVersion(params: { item: any }): number {
-		if (!this.#recordedItems.has(params.item)) throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(params.item)}`)
-		return this.#recordedItems.get(params.item)!.version
+		const itemData = this.#recordedItems.get(params.item)
+		if (itemData === undefined)
+			throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(params.item)}`)
+		return itemData.version
 	}
 	
 	#recordAndStripItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
 			(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
-		if (!create && !Number.isInteger(item.version)) throw new Error(`Item must have verison: ${JSON.stringify(item)}`)
-		const version = create ? 0 : item.version
-		delete item.version
+		if (!create && !Number.isInteger(item[table.versionAttribute]))
+			throw new Error(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
+		const version = create ? 0 : item[table.versionAttribute]
+		delete item[table.versionAttribute]
 		const validatedItem: ShapeToType<typeof table.itemShape> = validateDataShape({
 			data: item,
 			shape: table.itemShape,
@@ -299,7 +301,7 @@ export class OptimusDdbClient {
 		const set = itemData.table.attributes
 			.filter(key => item[key as string] !== undefined && !itemData.table.keyAttributes.includes(key as string))
 			.map(key => `${builder.addName(key as string)} = ${builder.addValue(item[key as string])}`)
-			.concat(`${builder.addName("version")} = ${builder.addValue(itemData.version+1)}`)
+			.concat(`${builder.addName(itemData.table.versionAttribute)} = ${builder.addValue(itemData.version+1)}`)
 			.join(", ")
 		const remove = itemData.table.attributes
 			.filter(key => item[key as string] === undefined && !itemData.table.keyAttributes.includes(key as string))
@@ -307,8 +309,7 @@ export class OptimusDdbClient {
 			.join(", ")
 		return {
 			UpdateExpression: remove.length > 0 ? `SET ${set} REMOVE ${remove}` : `SET ${set}`,
-			ConditionExpression: `attribute_exists(${builder.addName("version")}) AND `
-				+`(${builder.addName("version")} = ${builder.addValue(itemData.version)})`,
+			ConditionExpression: `(${builder.addName(itemData.table.versionAttribute)} = ${builder.addValue(itemData.version)})`,
 			ExpressionAttributeNames: builder.attributeNames,
 			ExpressionAttributeValues: builder.attributeValues
 		}
