@@ -20,39 +20,39 @@ type ItemData = {
 export class OptimusDdbClient {
 	#recordedItems: WeakMap<any, ItemData>
 	#ddbDocumentClient: DynamoDBDocumentClient
-	constructor(props?: {
+	constructor(params?: {
 		dynamoDbClientConfig?: DynamoDBClientConfig
 	}) {
 		this.#recordedItems = new WeakMap()
-		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...props?.dynamoDbClientConfig}), {
+		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...params?.dynamoDbClientConfig}), {
 			marshallOptions: {
 				removeUndefinedValues: true
 			}
 		})
 	}
 
-	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
+	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(params: {
 		table: Table<I,P,S>,
-		item: ShapeToType<typeof props.table.itemShape>
-	}): ShapeToType<typeof props.table.itemShape> {
-		return this.#recordAndStripItem({ ...props.item }, props.table, true)
+		item: ShapeToType<typeof params.table.itemShape>
+	}): ShapeToType<typeof params.table.itemShape> {
+		return this.#recordAndStripItem({ ...params.item }, params.table, true)
 	}
 
-	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(props: {
+	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(params: {
 		table: Table<I,P,S>,
 		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => E
 	}): Promise<E extends Error ? ShapeToType<DictionaryShape<I>> : ShapeToType<DictionaryShape<I>> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
-			TableName: props.table.tableName,
-			Key: props.key,
+			TableName: params.table.tableName,
+			Key: params.key,
 			ConsistentRead: true
 		}))).Item
 		if (item === undefined) {
-			const error = props.itemNotFoundErrorOverride !== undefined ? (
-				props.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: [props.key] }))
+			const error = params.itemNotFoundErrorOverride !== undefined ? (
+				params.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: [params.key] }))
 			) : (
-				new ItemNotFoundError({ itemKeys: [props.key] })
+				new ItemNotFoundError({ itemKeys: [params.key] })
 			)
 			if (error instanceof Error) {
 				throw error
@@ -60,33 +60,33 @@ export class OptimusDdbClient {
 				return undefined as E extends Error ? ShapeToType<DictionaryShape<I>> : ShapeToType<DictionaryShape<I>> | undefined
 			}
 		} else {
-			return this.#recordAndStripItem(item, props.table, false) as ShapeToType<typeof props.table.itemShape>
+			return this.#recordAndStripItem(item, params.table, false) as ShapeToType<typeof params.table.itemShape>
 		}
 	}
 
-	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(props: {
+	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(params: {
 		table: Table<I,P,S>,
 		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
 	}): Promise<Array<ShapeToType<DictionaryShape<I>>>> {
-		if (props.keys.length === 0) return []
+		if (params.keys.length === 0) return []
 		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
 			RequestItems: {
-				[props.table.tableName]: {
-					Keys: props.keys,
+				[params.table.tableName]: {
+					Keys: params.keys,
 					ConsistentRead: true
 				}
 			}
 		}))
-		const items = res.Responses![props.table.tableName]
+		const items = res.Responses![params.table.tableName]
 		if (res.UnprocessedKeys && Object.values(res.UnprocessedKeys).length > 0)
 			throw new UnprocessedKeysError({ unprocessedKeys: Object.values(res.UnprocessedKeys).map(x => x.Keys!) })
-		if (items.length !== props.keys.length) {
-			const unfoundItemKeys = props.keys.filter(key => !items.find(item => {
+		if (items.length !== params.keys.length) {
+			const unfoundItemKeys = params.keys.filter(key => !items.find(item => {
 				return Object.entries(key).filter(keyAttr => item[keyAttr[0]] === keyAttr[1]).length === Object.entries(key).length
 			}))
-			const error = props.itemNotFoundErrorOverride !== undefined ? (
-				props.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: unfoundItemKeys }))
+			const error = params.itemNotFoundErrorOverride !== undefined ? (
+				params.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: unfoundItemKeys }))
 			) : (
 				new ItemNotFoundError({ itemKeys: unfoundItemKeys })
 			)
@@ -94,10 +94,10 @@ export class OptimusDdbClient {
 				throw error
 			}
 		}
-		return items.map(item => this.#recordAndStripItem(item, props.table, false))
+		return items.map(item => this.#recordAndStripItem(item, params.table, false))
 	}
 	
-	async queryItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(props: {
+	async queryItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
 		sortKeyCondition?: AnyToNever<ShapeToType<I[S]>> extends never ? never : SortKeyCondition<S, ShapeToType<I[S]>>,
@@ -107,64 +107,64 @@ export class OptimusDdbClient {
 		nextToken?: string,
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
-		const params: QueryCommandInput = {
-			TableName: getIndexTable(props.index).tableName,
-			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
-			ConsistentRead: props.index instanceof Table,
+		const queryCommandInput: QueryCommandInput = {
+			TableName: getIndexTable(params.index).tableName,
+			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
+			ConsistentRead: params.index instanceof Table,
 			...getDynamoDbExpression({
-				partitionKeyCondition: props.partitionKeyCondition,
-				sortKeyCondition: props.sortKeyCondition,
-				filterConditions: props.filterConditions !== undefined ? props.filterConditions : []
+				partitionKeyCondition: params.partitionKeyCondition,
+				sortKeyCondition: params.sortKeyCondition,
+				filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
 			}),
-			ScanIndexForward: props.scanIndexForward
+			ScanIndexForward: params.scanIndexForward
 		}
 		const [items, lastEvaluatedKey] = await getItemsPages({
-			params: params,
+			commandInput: queryCommandInput,
 			get: input => this.#ddbDocumentClient.send(new QueryCommand(input)),
-			limit: props.limit,
-			lastEvaluatedKey: decodeNextToken(props.nextToken, getLastEvaluatedKeyShape(props.index),
-				props.invalidNextTokenErrorOverride)
+			limit: params.limit,
+			lastEvaluatedKey: decodeNextToken(params.nextToken, getLastEvaluatedKeyShape(params.index),
+				params.invalidNextTokenErrorOverride)
 		})
 		return [
-			items.map(item => this.#recordAndStripItem(item, getIndexTable(props.index), false)),
+			items.map(item => this.#recordAndStripItem(item, getIndexTable(params.index), false)),
 			encodeNextToken(lastEvaluatedKey) as L extends number ? string | undefined : undefined
 		]
 	}
 	
-	async scanItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(props: {
+	async scanItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		filterConditions?: Array<FilterConditionsFor<I,never,never>>,
 		limit?: L,
 		nextToken?: string,
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
-		const params: ScanCommandInput = {
-			TableName: getIndexTable(props.index).tableName,
-			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
-			ConsistentRead: props.index instanceof Table,
+		const scanCommandInput: ScanCommandInput = {
+			TableName: getIndexTable(params.index).tableName,
+			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
+			ConsistentRead: params.index instanceof Table,
 			...getDynamoDbExpression({
-				filterConditions: props.filterConditions !== undefined ? props.filterConditions : []
+				filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
 			})
 		}
 		const [items, lastEvaluatedKey] = await getItemsPages({
-			params: params,
+			commandInput: scanCommandInput,
 			get: input => this.#ddbDocumentClient.send(new ScanCommand(input)),
-			limit: props.limit,
-			lastEvaluatedKey: decodeNextToken(props.nextToken, getLastEvaluatedKeyShape(props.index),
-				props.invalidNextTokenErrorOverride)
+			limit: params.limit,
+			lastEvaluatedKey: decodeNextToken(params.nextToken, getLastEvaluatedKeyShape(params.index),
+				params.invalidNextTokenErrorOverride)
 		})
 		return [
-			items.map(item => this.#recordAndStripItem(item, getIndexTable(props.index), false)),
+			items.map(item => this.#recordAndStripItem(item, getIndexTable(params.index), false)),
 			encodeNextToken(lastEvaluatedKey) as L extends number ? string | undefined : undefined
 		]
 	}
 	
-	async commitItems(props: {
+	async commitItems(params: {
 		items: Array<any>,
 		optimisticLockErrorOverride?: (e: OptimisticLockError) => Error
 	}) {
-		if (props.items.length === 0) return
-		const transactItems = props.items.map(item => {
+		if (params.items.length === 0) return
+		const transactItems = params.items.map(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
 			const itemData = this.#recordedItems.get(item)!
 			validateObjectShape({
@@ -239,8 +239,8 @@ export class OptimusDdbClient {
 				const exception = error as TransactionCanceledException
 				if (exception.CancellationReasons !== undefined && exception.CancellationReasons
 					.filter(reason => reason.Code === "ConditionalCheckFailed").length > 0) {
-					throw props.optimisticLockErrorOverride !== undefined ? (
-						props.optimisticLockErrorOverride(new OptimisticLockError())
+					throw params.optimisticLockErrorOverride !== undefined ? (
+						params.optimisticLockErrorOverride(new OptimisticLockError())
 					) : (
 						new OptimisticLockError()
 					)
@@ -251,7 +251,7 @@ export class OptimusDdbClient {
 				throw error
 			}
 		}
-		props.items.forEach(item => {
+		params.items.forEach(item => {
 			const itemData = this.#recordedItems.get(item)!
 			if (itemData.create) {
 				itemData.create = false
@@ -263,15 +263,15 @@ export class OptimusDdbClient {
 		})
 	}
 	
-	markItemForDeletion(props: { item: any }) {
-		if (!this.#recordedItems.has(props.item)) throw new Error(`Unrecorded item cannot be marked for deletion: ${JSON.stringify(props.item)}`)
-		if (this.#recordedItems.get(props.item)!.delete) throw new Error(`Item is already marked for deletion: ${JSON.stringify(props.item)}`)
-		this.#recordedItems.get(props.item)!.delete = true
+	markItemForDeletion(params: { item: any }) {
+		if (!this.#recordedItems.has(params.item)) throw new Error(`Unrecorded item cannot be marked for deletion: ${JSON.stringify(params.item)}`)
+		if (this.#recordedItems.get(params.item)!.delete) throw new Error(`Item is already marked for deletion: ${JSON.stringify(params.item)}`)
+		this.#recordedItems.get(params.item)!.delete = true
 	}
 
-	getItemVersion(props: { item: any }): number {
-		if (!this.#recordedItems.has(props.item)) throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(props.item)}`)
-		return this.#recordedItems.get(props.item)!.version
+	getItemVersion(params: { item: any }): number {
+		if (!this.#recordedItems.has(params.item)) throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(params.item)}`)
+		return this.#recordedItems.get(params.item)!.version
 	}
 	
 	#recordAndStripItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>

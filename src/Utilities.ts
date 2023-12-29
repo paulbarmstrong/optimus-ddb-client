@@ -6,7 +6,7 @@ import { Paginator, QueryCommandInput, QueryCommandOutput, ScanCommandInput, Sca
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
 
-export function getDynamoDbExpression(props: {
+export function getDynamoDbExpression(params: {
 	partitionKeyCondition?: PartitionKeyCondition<any,any>,
 	sortKeyCondition?: SortKeyCondition<any,any>,
 	filterConditions?: Array<FilterCondition<any,any>>,
@@ -14,17 +14,17 @@ export function getDynamoDbExpression(props: {
 }) {
 	const builder: ExpressionBuilder = new ExpressionBuilder()
 	const keyConditions = [
-		...(props.partitionKeyCondition ? [props.partitionKeyCondition] : []),
-		...(props.sortKeyCondition ? [props.sortKeyCondition] : [])
+		...(params.partitionKeyCondition ? [params.partitionKeyCondition] : []),
+		...(params.sortKeyCondition ? [params.sortKeyCondition] : [])
 	]
 	const keyConditionExpression = keyConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
-	const filterConditions = props.filterConditions !== undefined ? props.filterConditions : []
+	const filterConditions = params.filterConditions !== undefined ? params.filterConditions : []
 	const filterConditionExpression = filterConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
-	const conditionConditions = props.conditionConditions !== undefined ? props.conditionConditions : []
+	const conditionConditions = params.conditionConditions !== undefined ? params.conditionConditions : []
 	const conditionConditionExpression = conditionConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
@@ -134,24 +134,24 @@ export async function getItemsFromPaginator(paginator: Paginator<QueryCommandOut
 	return [items, undefined]
 }
 
-export async function getItemsPages(props: {
-	params: QueryCommandInput | ScanCommandInput,
+export async function getItemsPages(params: {
+	commandInput: QueryCommandInput | ScanCommandInput,
 	get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
 	limit: number | undefined,
 	lastEvaluatedKey: Record<string, any> | undefined
 })
 	: Promise<[Array<Record<string, any>>, Record<string, any> | undefined]> {
 	const items: Array<Record<string, any>> = []
-	let lastEvaluatedKey: Record<string, any> | undefined = props.lastEvaluatedKey
+	let lastEvaluatedKey: Record<string, any> | undefined = params.lastEvaluatedKey
 	do {
-		const res = await props.get({
-			...props.params,
+		const res = await params.get({
+			...params.commandInput,
 			ExclusiveStartKey: lastEvaluatedKey,
-			Limit: props.limit !== undefined ? props.limit - items.length : undefined
+			Limit: params.limit !== undefined ? params.limit - items.length : undefined
 		})
 		items.push(...res.Items!)
 		lastEvaluatedKey = res.LastEvaluatedKey
-	} while (lastEvaluatedKey !== undefined && !(props.limit && items.length === props.limit))
+	} while (lastEvaluatedKey !== undefined && !(params.limit && items.length === params.limit))
 	return [items, lastEvaluatedKey]
 }
 

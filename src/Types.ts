@@ -40,18 +40,18 @@ export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exi
 export class UnprocessedKeysError extends Error {
 	name = "ItemNotFoundError"
 	readonly unprocessedKeys: Array<Record<string,any>>
-	constructor(props: { unprocessedKeys: Array<Record<string,any>> }) {
-		super(`Error processing ${props.unprocessedKeys} keys.`)
-		this.unprocessedKeys = props.unprocessedKeys
+	constructor(params: { unprocessedKeys: Array<Record<string,any>> }) {
+		super(`Error processing ${params.unprocessedKeys} keys.`)
+		this.unprocessedKeys = params.unprocessedKeys
 	}
 }
 
 export class ItemNotFoundError extends Error {
 	name = "ItemNotFoundError"
 	readonly itemKeys: Array<Record<string,any>>
-	constructor(props: { itemKeys: Array<Record<string,any>> }) {
-		super(`${props.itemKeys.length} item${plurality(props.itemKeys.length)} not found.`)
-		this.itemKeys = props.itemKeys
+	constructor(params: { itemKeys: Array<Record<string,any>> }) {
+		super(`${params.itemKeys.length} item${plurality(params.itemKeys.length)} not found.`)
+		this.itemKeys = params.itemKeys
 	}
 }
 
@@ -71,7 +71,7 @@ export class InvalidNextTokenError extends Error {
 
 export class ItemShapeValidationError extends ShapeValidationError {
 	name = "ItemShapeValidationError"
-	constructor(props: ConstructorParameters<typeof ShapeValidationError>[0]) {
-		super(props)
+	constructor(params: ConstructorParameters<typeof ShapeValidationError>[0]) {
+		super(params)
 	}
 }

@@ -3,7 +3,7 @@ import { Connection, Resource, connectionsTable, resourcesTable } from "../../te
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { OptimisticLockError, Table } from "../../../src"
 import { s } from "shape-tape"
-import { PutItemCommand } from "@aws-sdk/client-dynamodb"
+import crypto from "crypto"
 
 test("create, update, then delete", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([connectionsTable], [])
