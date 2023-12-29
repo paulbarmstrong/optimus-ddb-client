@@ -1,6 +1,6 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
-import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, SortKeyCondition } from "./Types"
+import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, ShapeDictionary, SortKeyCondition } from "./Types"
 import { Shape, ShapeToType, s as sh, validateObjectShape }  from "shape-tape"
 import { Paginator, QueryCommandInput, QueryCommandOutput, ScanCommandInput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { Table } from "./classes/Table"
@@ -99,10 +99,11 @@ export function decodeNextToken<T extends Shape>(nextToken: string | undefined, 
 }
 
 export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
+	const table = getIndexTable(index)
 	return sh.dictionary({
-		[index.table.partitionKey]: index.table.itemShape.dictionary[index.table.partitionKey],
-		...(index.table.sortKey !== undefined ? (
-			{ [index.table.sortKey]: index.table.itemShape.dictionary[index.table.sortKey] }
+		[table.partitionKey]: table.itemShape.dictionary[table.partitionKey],
+		...(table.sortKey !== undefined ? (
+			{ [table.sortKey]: table.itemShape.dictionary[table.sortKey] }
 		) : (
 			{}
 		)),
@@ -156,4 +157,13 @@ export async function getItemsPages(props: {
 
 export function plurality(num: number) {
 	return num === 1 ? "" : "s"
+}
+
+export function getIndexTable<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
+		(index: Table<I,P,S> | Gsi<I,P,S>): Table<I,P,S> {
+	if (index instanceof Table) {
+		return index
+	} else {
+		return index.table
+	}
 }

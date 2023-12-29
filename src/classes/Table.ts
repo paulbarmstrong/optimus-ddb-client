@@ -2,7 +2,6 @@ import { DictionaryShape } from "shape-tape"
 import { ShapeDictionary } from "../Types"
 
 export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof I = never> {
-	table = this
 	tableName: string
 	itemShape: DictionaryShape<I>
 	partitionKey: P
@@ -26,7 +25,7 @@ export class Table<I extends ShapeDictionary, P extends keyof I, S extends keyof
 		]
 		Object.keys(this.itemShape.dictionary).forEach(attributeName => {
 			if (attributeName === "version") {
-				throw new Error(`${this.table.tableName} table's item shape includes reserved attribute name "version".`)
+				throw new Error(`${this.tableName} table's item shape includes reserved attribute name "version".`)
 			}
 		})
 	}

@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteComma
 import { DictionaryShape, ShapeToType, validateObjectShape } from "shape-tape"
 import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
 	PartitionKeyCondition, ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -108,7 +108,7 @@ export class OptimusDdbClient {
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
 		const params: QueryCommandInput = {
-			TableName: props.index.table.tableName,
+			TableName: getIndexTable(props.index).tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
 			ConsistentRead: props.index instanceof Table,
 			...getDynamoDbExpression({
@@ -126,7 +126,7 @@ export class OptimusDdbClient {
 				props.invalidNextTokenErrorOverride)
 		})
 		return [
-			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
+			items.map(item => this.#recordAndStripItem(item, getIndexTable(props.index), false)),
 			encodeNextToken(lastEvaluatedKey) as L extends number ? string | undefined : undefined
 		]
 	}
@@ -139,7 +139,7 @@ export class OptimusDdbClient {
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeToType<DictionaryShape<I>>>, L extends number ? string | undefined : undefined]> {
 		const params: ScanCommandInput = {
-			TableName: props.index.table.tableName,
+			TableName: getIndexTable(props.index).tableName,
 			IndexName: props.index instanceof Gsi ? props.index.indexName : undefined,
 			ConsistentRead: props.index instanceof Table,
 			...getDynamoDbExpression({
@@ -154,7 +154,7 @@ export class OptimusDdbClient {
 				props.invalidNextTokenErrorOverride)
 		})
 		return [
-			items.map(item => this.#recordAndStripItem(item, props.index.table, false)),
+			items.map(item => this.#recordAndStripItem(item, getIndexTable(props.index), false)),
 			encodeNextToken(lastEvaluatedKey) as L extends number ? string | undefined : undefined
 		]
 	}
