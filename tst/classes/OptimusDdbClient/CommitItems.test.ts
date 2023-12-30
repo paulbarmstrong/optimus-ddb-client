@@ -263,11 +263,11 @@ test("README example", async () => {
 
 	// Perform operations on items in those tables.
 	// Example scenario - Handling an API request for adding a comment to a blog post:
-	async function handleCreateBlogPostComment(body: { blogPostId: string, commentContent: string }) {
+	async function handleCreateBlogPostComment(blogPostId: string, commentContent: string) {
 		// Get the blog post
 		const blogPost = await optimus.getItem({
 			table: blogPostsTable,
-			key: { id: body.blogPostId }
+			key: { id: blogPostId }
 		})
 
 		// Prepare a change to increase the blog post's numComments.
@@ -277,9 +277,9 @@ test("README example", async () => {
 		const comment = optimus.draftItem({
 			table: commentsTable,
 			item: {
-				blogPostId: body.blogPostId,
+				blogPostId: blogPostId,
 				id: crypto.randomUUID(),
-				content: body.commentContent
+				content: commentContent
 			}
 		})
 
@@ -302,7 +302,7 @@ test("README example", async () => {
 		}
 	}))
 
-	const createCommentRes = await handleCreateBlogPostComment({ blogPostId: blogPostId, commentContent: "Nice blog post" })
+	const createCommentRes = await handleCreateBlogPostComment(blogPostId, "Nice blog post")
 
 	const blogPostItem = (await ddbDocumentClient.send(new GetCommand({
 		TableName: "BlogPosts",

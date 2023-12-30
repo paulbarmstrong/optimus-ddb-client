@@ -30,7 +30,7 @@ import { s } from "shape-tape"
 // Create Table class instances based on your DynamoDB tables.
 const blogPostsTable = new Table({
 	tableName: "BlogPosts",
-	itemShape: s.dictionary({
+	itemShape: s.object({
 		id: s.string(),
 		name: s.string(),
 		content: s.string(),
@@ -40,7 +40,7 @@ const blogPostsTable = new Table({
 })
 const commentsTable = new Table({
 	tableName: "Comments",
-	itemShape: s.dictionary({
+	itemShape: s.object({
 		blogPostId: s.string(),
 		id: s.string(),
 		content: s.string()
