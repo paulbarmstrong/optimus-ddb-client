@@ -56,7 +56,7 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 #### Defined in
 
-[src/classes/Gsi.ts:17](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Gsi.ts#L17)
+[src/classes/Gsi.ts:17](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L17)
 
 ## Properties
 
@@ -68,7 +68,7 @@ The IndexName of the GSI.
 
 #### Defined in
 
-[src/classes/Gsi.ts:12](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Gsi.ts#L12)
+[src/classes/Gsi.ts:12](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L12)
 
 ___
 
@@ -80,7 +80,7 @@ The name of the GSI's partition key.
 
 #### Defined in
 
-[src/classes/Gsi.ts:14](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Gsi.ts#L14)
+[src/classes/Gsi.ts:14](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L14)
 
 ___
 
@@ -92,7 +92,7 @@ The name of the GSI's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Gsi.ts:16](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Gsi.ts#L16)
+[src/classes/Gsi.ts:16](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L16)
 
 ___
 
@@ -104,4 +104,4 @@ The Table class instance representing the DynamoDB table of the GSI.
 
 #### Defined in
 
-[src/classes/Gsi.ts:10](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Gsi.ts#L10)
+[src/classes/Gsi.ts:10](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L10)

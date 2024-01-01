@@ -88,7 +88,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 #### Defined in
 
-[src/classes/Table.ts:55](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L55)
+[src/classes/Table.ts:55](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L55)
 
 ## Properties
 
@@ -100,7 +100,7 @@ The names of all of the item attributes (except for the version attribute).
 
 #### Defined in
 
-[src/classes/Table.ts:47](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L47)
+[src/classes/Table.ts:47](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L47)
 
 ___
 
@@ -112,7 +112,7 @@ Shape representing the structure of items in the table. Please see the Table cla
 
 #### Defined in
 
-[src/classes/Table.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L41)
+[src/classes/Table.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L41)
 
 ___
 
@@ -125,7 +125,7 @@ if the table has a sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L52)
+[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L52)
 
 ___
 
@@ -137,7 +137,7 @@ The name of the DynamoDB table's partition key.
 
 #### Defined in
 
-[src/classes/Table.ts:43](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L43)
+[src/classes/Table.ts:43](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L43)
 
 ___
 
@@ -149,7 +149,7 @@ The name of the DynamoDB table's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:45](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L45)
+[src/classes/Table.ts:45](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L45)
 
 ___
 
@@ -161,7 +161,7 @@ The name of the DynamoDB table.
 
 #### Defined in
 
-[src/classes/Table.ts:39](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L39)
+[src/classes/Table.ts:39](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L39)
 
 ___
 
@@ -173,4 +173,4 @@ The name of the version attribute used for optimistic locking.
 
 #### Defined in
 
-[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/ad7ebcc/src/classes/Table.ts#L54)
+[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L54)

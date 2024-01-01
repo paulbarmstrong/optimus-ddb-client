@@ -4,7 +4,7 @@
 	"main": "dist/src/index",
 	"typings": "dist/src/index",
 	"scripts": {
-		"generate-docs": "npx typedoc --readme none --entryDocument index.md --githubPages false --plugin typedoc-plugin-markdown --out docs src/index.ts",
+		"generate-docs": "npx typedoc --readme none --entryDocument index.md --githubPages false --sourceLinkTemplate 'https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/{path}#L{line}' --plugin typedoc-plugin-markdown --out docs src/index.ts",
 		"build": "tsc",
 		"test": "npx jest --runInBand",
 		"prepublishOnly": "npm run build && npm run generate-docs && npm run test"
