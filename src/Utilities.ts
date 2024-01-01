@@ -1,6 +1,6 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
-import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, ShapeDictionary, SortKeyCondition } from "./Types"
+import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, ShapeObject, SortKeyCondition } from "./Types"
 import { Shape, ShapeToType, s, validateDataShape }  from "shape-tape"
 import { Paginator, QueryCommandInput, QueryCommandOutput, ScanCommandInput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { Table } from "./classes/Table"
@@ -159,7 +159,7 @@ export function plurality(num: number) {
 	return num === 1 ? "" : "s"
 }
 
-export function getIndexTable<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
+export function getIndexTable<I extends ShapeObject, P extends keyof I, S extends keyof I>
 		(index: Table<I,P,S> | Gsi<I,P,S>): Table<I,P,S> {
 	if (index instanceof Table) {
 		return index

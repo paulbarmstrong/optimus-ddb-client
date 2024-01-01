@@ -12,9 +12,8 @@ An abstracted version number attribute facilitates optimistic locking. When cons
 
 ### Requirements
 
-Any existing items of tables to be used with OptimusDdbClient should have an N attribute to use for optimistic locking. It should be specified in the `Table` constructor's `versionAttribute` parameter. The default is "version".
-
-GSIs to be used with OptimusDdbClient should have all attributes projected.
+1. Any existing items of tables to be used with OptimusDdbClient should have an N attribute to use for optimistic locking. It should be specified in the `Table` constructor's `versionAttribute` parameter. The default is "version".
+2. GSIs to be used with OptimusDdbClient should have all attributes projected.
 
 ### Installation
 ```
@@ -94,3 +93,7 @@ const blogPost: BlogPost = await optimus.getItem({
 ### Tests
 
 The GitHub repo's tst directory has unit tests and integ tests using DynamoDB local. You can run the tests by cloning the repo and running `npm install` then `npm run test`. You need to have java installed to run the tests because DynamoDB local requires java.
+
+### Documentation
+
+Please see [the low level documentation](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/docs/index.md) for more details.

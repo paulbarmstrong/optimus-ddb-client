@@ -1,14 +1,14 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
-import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, 
-	QueryCommandInput, ScanCommandInput } from "@aws-sdk/lib-dynamodb"
-import { ObjectShape, ShapeToType, validateDataShape } from "shape-tape"
-import { AnyToNever, FilterConditionsFor, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, 
-	OptimisticLockError, PartitionKeyCondition, ShapeDictionary, SortKeyCondition, UnprocessedKeysError } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, 
-	getLastEvaluatedKeyShape } from "../Utilities"
+import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
+	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
+import { ShapeToType, validateDataShape } from "shape-tape"
+import { AnyToNever, FilterCondition, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
+	PartitionKeyCondition, ShapeObject, ShapeObjectToType } from "../Types"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
+import { SortKeyCondition, UnprocessedKeysError } from "../Types"
 
 type ItemData = {
 	table: Table<any, any, any>,
@@ -18,13 +18,25 @@ type ItemData = {
 	create: boolean
 }
 
+/**
+ * Class to be used as a high level DynamoDB client. Consumers call various functions on their 
+ * OptimusDdbClient to perform operations on items in their tables. Please see the README for more
+ * high level information.
+ * 
+ * The overhead associated with an instance of OptimusDdbClient is similar to that of
+ * DynamoDBDocumentClient from the AWS SDK (that's because OptimusDdbClient creates a 
+ * DynamoDBDocumentClient).
+ */
 export class OptimusDdbClient {
-	#recordedItems: WeakMap<any, ItemData>
+	/** @hidden */
+	#recordedItems: WeakMap<Record<string, any>, ItemData>
+	/** @hidden */
 	#ddbDocumentClient: DynamoDBDocumentClient
 	constructor(params?: {
+		/** Any DynamoDBClientConfig options for OptimusDdbClient to consider. */
 		dynamoDbClientConfig?: DynamoDBClientConfig
 	}) {
-		this.#recordedItems = new WeakMap()
+		this.#recordedItems = new WeakMap<Record<string, any>, ItemData>()
 		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...params?.dynamoDbClientConfig}), {
 			marshallOptions: {
 				removeUndefinedValues: true
@@ -32,18 +44,58 @@ export class OptimusDdbClient {
 		})
 	}
 
-	draftItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(params: {
+	/**
+	 * Drafts an item for creation. It does not call DynamoDB. The item is only
+	 * created in DynamoDB once it is included in the `items` of a call to `commitItems`.
+	 * 
+	 * @returns The drafted item.
+	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
+	 */
+	draftItem<I extends ShapeObject, P extends keyof I, S extends keyof I>(
+	/** @hidden */
+		params: {
+		/** Table where the item should go. */
 		table: Table<I,P,S>,
-		item: ShapeToType<typeof params.table.itemShape>
-	}): ShapeToType<typeof params.table.itemShape> {
+		/** Object representing the item to be drafted. It should be an object not provided to OptimusDdbClient before. */
+		item: ShapeObjectToType<I>
+	}): ShapeObjectToType<I> {
 		return this.#recordAndStripItem({ ...params.item }, params.table, true)
 	}
 
-	async getItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(params: {
+	/**
+	 * Marks an item for deletion. It does not call DynamoDB. The item is only
+	 * deleted in DynamoDB once it is included in the `items` of a call to `commitItems`
+	 */
+	markItemForDeletion(params: {
+		/** Item to be marked for deletion. It needs to be an item produced by OptimusDdbClient. */
+		item: Record<string, any>
+	}) {
+		if (!this.#recordedItems.has(params.item)) throw new Error(`Unrecorded item cannot be marked for deletion: ${JSON.stringify(params.item)}`)
+		if (this.#recordedItems.get(params.item)!.delete) throw new Error(`Item is already marked for deletion: ${JSON.stringify(params.item)}`)
+		this.#recordedItems.get(params.item)!.delete = true
+	}
+
+	/**
+	 * Gets an item from the given Table with the given key. It calls [the GetItem DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html).
+	 * 
+	 * @returns The item with the given key (or `undefined` if the item is not found and 
+	 * `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
+	 * @throws ItemNotFoundError if the item is not found (and `itemNotFoundErrorOverride` is not set).
+	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
+	 */
+	async getItem<I extends ShapeObject, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(params: {
+		/** Table to look in. */
 		table: Table<I,P,S>,
+		/** Key to look up. */
 		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
+		/**
+		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error`
+		 * then `getItem` will throw that error instead of `ItemNotFoundError`. If it 
+		 * returns `undefined` then `getItem` will return `undefined` instead of throwing `ItemNotFoundError`.
+		 */
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => E
-	}): Promise<E extends Error ? ShapeToType<ObjectShape<I>> : ShapeToType<ObjectShape<I>> | undefined> {
+	}): Promise<E extends Error ? ShapeObjectToType<I> : ShapeObjectToType<I> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: params.table.tableName,
 			Key: params.key,
@@ -58,18 +110,35 @@ export class OptimusDdbClient {
 			if (error instanceof Error) {
 				throw error
 			} else {
-				return undefined as E extends Error ? ShapeToType<ObjectShape<I>> : ShapeToType<ObjectShape<I>> | undefined
+				return undefined as E extends Error ? ShapeObjectToType<I> : ShapeObjectToType<I> | undefined
 			}
 		} else {
-			return this.#recordAndStripItem(item, params.table, false) as ShapeToType<typeof params.table.itemShape>
+			return this.#recordAndStripItem(item, params.table, false) as ShapeObjectToType<I>
 		}
 	}
 
-	async getItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I>(params: {
+	/**
+	 * Gets items from the given Table with the given keys. It calls [the BatchGetItem DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html).
+	 * 
+	 * @returns All of the items with the given keys (or just the items that were found if 
+	 * `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
+	 * @throws UnprocessedKeysError if there are any unprocessed keys.
+	 * @throws ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOverride` is not set).
+	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 */
+	async getItems<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
+		/** Table to look in. */
 		table: Table<I,P,S>,
+		/** Keys to look up. The limit is 100. */
 		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
+		/**
+		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw 
+		 * that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItems` will omit the item
+		 * from its response instead of throwing `ItemNotFoundError`.
+		 */
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
-	}): Promise<Array<ShapeToType<ObjectShape<I>>>> {
+	}): Promise<Array<ShapeObjectToType<I>>> {
 		if (params.keys.length === 0) return []
 		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
 			RequestItems: {
@@ -98,16 +167,37 @@ export class OptimusDdbClient {
 		return items.map(item => this.#recordAndStripItem(item, params.table, false))
 	}
 	
-	async queryItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
+	/**
+	 * Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html).
+	 * 
+	 * @returns A tuple:
+	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
+	 * * [1] Either a nextToken if there's more to query after reaching the `limit`, or undefined. It's always
+	 * undefined if `limit` is not set.
+	 * @throws InvalidNextTokenError if the nextToken parameter is invalid.
+	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 */
+	async queryItems<I extends ShapeObject, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
+		/** The table or GSI to query. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
+		/** Condition to specify which partition the Query will take place in. */
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
+		/** Optional condition to specify how the partition will be queried. */
 		sortKeyCondition?: AnyToNever<ShapeToType<I[S]>> extends never ? never : SortKeyCondition<S, ShapeToType<I[S]>>,
-		filterConditions?: Array<FilterConditionsFor<I,P,S>>,
+		/** Optional list of conditions to filter down the results. */
+		filterConditions?: Array<{
+			[K in Exclude<Exclude<keyof I, P>, S>]: FilterCondition<K, ShapeToType<I[K]>>
+		}[Exclude<Exclude<keyof I, P>, S>]>,
+		/** Optional parameter used to switch the order of the query. */
 		scanIndexForward?: boolean,
+		/** Optional limit on the number of items to find before returning. */
 		limit?: L,
+		/** Optional parameter to continue based on a nextToken returned from an earlier `queryItems` call. */
 		nextToken?: string,
+		/** Optional parameter to override `InvalidNextTokenError`. */
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
-	}): Promise<[Array<ShapeToType<ObjectShape<I>>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
 		const queryCommandInput: QueryCommandInput = {
 			TableName: getIndexTable(params.index).tableName,
 			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
@@ -132,13 +222,31 @@ export class OptimusDdbClient {
 		]
 	}
 	
-	async scanItems<I extends ShapeDictionary, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
+	/**
+	 * Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html).
+	 * 
+	 * @returns A tuple:
+	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
+	 * * [1] Either a nextToken if there's more to scan after reaching the `limit`, or undefined. It's always
+	 * undefined if `limit` is not set.
+	 * @throws InvalidNextTokenError if the nextToken parameter is invalid.
+	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 */
+	async scanItems<I extends ShapeObject, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
+		/** The table or GSI to scan. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
-		filterConditions?: Array<FilterConditionsFor<I,never,never>>,
+		/** Optional list of conditions to filter down the results. */
+		filterConditions?: Array<{
+			[K in keyof I]: FilterCondition<K, ShapeToType<I[K]>>
+		}[keyof I]>,
+		/** Optional limit on the number of items to find before returning. */
 		limit?: L,
+		/** Optional parameter to continue based on a nextToken returned from an earlier `scanItems` call. */
 		nextToken?: string,
+		/** Optional parameter to override `InvalidNextTokenError`. */
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
-	}): Promise<[Array<ShapeToType<ObjectShape<I>>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
 		const scanCommandInput: ScanCommandInput = {
 			TableName: getIndexTable(params.index).tableName,
 			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
@@ -160,8 +268,18 @@ export class OptimusDdbClient {
 		]
 	}
 	
+	/**
+	 * Commits items together in a transaction. It calls [the TransactWriteItems DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html).
+	 * 
+	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 * @throws OptimisticLockError if the transaction is cancelled due to a conditional check failure.
+	 */
 	async commitItems(params: {
-		items: Array<any>,
+		/** Items to be committed together. They need to be items produced by OptimusDdbClient. The limit is
+		 * 100 (except that items having a key change count as 2). */
+		items: Array<Record<string, any>>,
+		/** Optional parameter to override `OptimisticLockError`. */
 		optimisticLockErrorOverride?: (e: OptimisticLockError) => Error
 	}) {
 		if (params.items.length === 0) return
@@ -261,21 +379,24 @@ export class OptimusDdbClient {
 			if (itemData.delete) this.#recordedItems.delete(item)
 		})
 	}
-	
-	markItemForDeletion(params: { item: any }) {
-		if (!this.#recordedItems.has(params.item)) throw new Error(`Unrecorded item cannot be marked for deletion: ${JSON.stringify(params.item)}`)
-		if (this.#recordedItems.get(params.item)!.delete) throw new Error(`Item is already marked for deletion: ${JSON.stringify(params.item)}`)
-		this.#recordedItems.get(params.item)!.delete = true
-	}
 
-	getItemVersion(params: { item: any }): number {
+	/**
+	 * Gets an item's optimistic locking version number.
+	 * 
+	 * @returns The item's optimistic locking version number.
+	 */
+	getItemVersion(params: {
+		/** An item produced by DynamoDbClient */
+		item: Record<string, any>
+	}): number {
 		const itemData = this.#recordedItems.get(params.item)
 		if (itemData === undefined)
 			throw new Error(`Cannot get version for unrecorded item: ${JSON.stringify(params.item)}`)
 		return itemData.version
 	}
 	
-	#recordAndStripItem<I extends ShapeDictionary, P extends keyof I, S extends keyof I>
+	/** @hidden */
+	#recordAndStripItem<I extends ShapeObject, P extends keyof I, S extends keyof I>
 			(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
 		if (!create && !Number.isInteger(item[table.versionAttribute]))
 			throw new Error(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
@@ -295,8 +416,10 @@ export class OptimusDdbClient {
 		})
 		return validatedItem
 	}
-	#getUpdateDynamoDbExpression<I extends ShapeDictionary>
-			(item: ShapeToType<ObjectShape<I>>, itemData: ItemData) {
+
+	/** @hidden */
+	#getUpdateDynamoDbExpression<I extends ShapeObject>
+			(item: ShapeObjectToType<I>, itemData: ItemData) {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
 		const set = itemData.table.attributes
 			.filter(key => item[key as string] !== undefined && !itemData.table.keyAttributes.includes(key as string))
