@@ -90,6 +90,8 @@ const blogPost: BlogPost = await optimus.getItem({
 })
 ```
 
+Please see [the unit test demonstrating this example](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/tst/README.test.ts).
+
 ### Tests
 
 The GitHub repo's tst directory has unit tests and integ tests using DynamoDB local. You can run the tests by cloning the repo and running `npm install` then `npm run test`. You need to have java installed to run the tests because DynamoDB local requires java.
