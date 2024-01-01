@@ -51,9 +51,7 @@ export class OptimusDdbClient {
 	 * @returns The drafted item.
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	draftItem<I extends ShapeObject, P extends keyof I, S extends keyof I>(
-	/** @hidden */
-		params: {
+	draftItem<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
 		/** Table where the item should go. */
 		table: Table<I,P,S>,
 		/** Object representing the item to be drafted. It should be an object not provided to OptimusDdbClient before. */
