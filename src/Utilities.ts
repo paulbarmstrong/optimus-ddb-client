@@ -167,3 +167,13 @@ export function getIndexTable<I extends ShapeObject, P extends keyof I, S extend
 		return index.table
 	}
 }
+
+export function shallowEquals(a: Record<string,any>, b: Record<string,any>) {
+	for (const key in a) {
+		if (!(key in b) || a[key] !== b[key]) return false
+	}
+	for (const key in b) {
+		if (!(key in a)) return false
+	}
+	return true
+}

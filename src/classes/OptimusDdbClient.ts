@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteComma
 import { ShapeToType, validateDataShape } from "shape-tape"
 import { AnyToNever, FilterCondition, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
 	PartitionKeyCondition, ShapeObject, ShapeObjectToType } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape } from "../Utilities"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape, shallowEquals } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -128,7 +128,7 @@ export class OptimusDdbClient {
 	async getItems<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
-		/** Keys to look up. The limit is 100. */
+		/** Keys to look up. */
 		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
 		/**
 		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw 
@@ -138,20 +138,31 @@ export class OptimusDdbClient {
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
 	}): Promise<Array<ShapeObjectToType<I>>> {
 		if (params.keys.length === 0) return []
-		const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
-			RequestItems: {
-				[params.table.tableName]: {
-					Keys: params.keys,
-					ConsistentRead: true
+		let prevUnprocessedKeys: Array<Record<string,any>> = []
+		const unfinishedKeys: Array<Record<string,any>> = [...params.keys]
+		const finishedItems: Array<Record<string,any>> = []
+		while (unfinishedKeys.length > 0) {
+			const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
+				RequestItems: {
+					[params.table.tableName]: {
+						Keys: unfinishedKeys.splice(0, 100),
+						ConsistentRead: true
+					}
 				}
+			}))
+			const items = res.Responses![params.table.tableName]
+			const unproccessedKeys = res.UnprocessedKeys !== undefined ? Object.values(res.UnprocessedKeys).map(x => x.Keys!) : []
+			const doubleUnprocessedKeys = prevUnprocessedKeys.filter(x => unproccessedKeys.find(y => shallowEquals(x, y)) !== undefined)
+			if (doubleUnprocessedKeys.length > 0) {
+				throw new UnprocessedKeysError({ unprocessedKeys: doubleUnprocessedKeys })
 			}
-		}))
-		const items = res.Responses![params.table.tableName]
-		if (res.UnprocessedKeys && Object.values(res.UnprocessedKeys).length > 0)
-			throw new UnprocessedKeysError({ unprocessedKeys: Object.values(res.UnprocessedKeys).map(x => x.Keys!) })
-		if (items.length !== params.keys.length) {
-			const unfoundItemKeys = params.keys.filter(key => !items.find(item => {
-				return Object.entries(key).filter(keyAttr => item[keyAttr[0]] === keyAttr[1]).length === Object.entries(key).length
+			finishedItems.push(...items)
+			prevUnprocessedKeys = unproccessedKeys
+			unfinishedKeys.push(...unproccessedKeys)
+		}
+		if (finishedItems.length !== params.keys.length) {
+			const unfoundItemKeys = params.keys.filter(key => !finishedItems.find(item => {
+				return Object.entries(key).filter(keyAttr => item[keyAttr[0]] !== keyAttr[1]).length === 0
 			}))
 			const error = params.itemNotFoundErrorOverride !== undefined ? (
 				params.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: unfoundItemKeys }))
@@ -162,7 +173,14 @@ export class OptimusDdbClient {
 				throw error
 			}
 		}
-		return items.map(item => this.#recordAndStripItem(item, params.table, false))
+		const finishedItemsMap = new Map(finishedItems.map(item => [
+			params.keys.find(key => params.table.keyAttributes.filter(keyAttr => (key as any)[keyAttr] !== item[keyAttr]).length === 0)!,
+			item
+		]))
+
+		return Array.from(params.keys.map(key => finishedItemsMap.get(key)))
+			.filter(item => item !== undefined)
+			.map(item => this.#recordAndStripItem(item, params.table, false))
 	}
 	
 	/**
