@@ -2,7 +2,6 @@ import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
 import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, ShapeObject, SortKeyCondition } from "./Types"
 import { Shape, ShapeToType, s, validateDataShape }  from "shape-tape"
-import { Paginator, QueryCommandInput, QueryCommandOutput, ScanCommandInput, ScanCommandOutput } from "@aws-sdk/lib-dynamodb"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
 
@@ -120,39 +119,6 @@ export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any
 			{}
 		))
 	})
-}
-
-export async function getItemsFromPaginator(paginator: Paginator<QueryCommandOutput | ScanCommandOutput>, limit: number | undefined)
-		: Promise<[Array<Record<string, any>>, Record<string, any> | undefined]> {
-	const items: Array<Record<string, any>> = []
-	for await (const page of paginator) {
-		items.push(...page.Items!)
-		if (limit !== undefined && items.length >= limit) {
-			return [items.slice(0, limit), page.LastEvaluatedKey]
-		}
-	}
-	return [items, undefined]
-}
-
-export async function getItemsPages(params: {
-	commandInput: QueryCommandInput | ScanCommandInput,
-	get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
-	limit: number | undefined,
-	lastEvaluatedKey: Record<string, any> | undefined
-})
-	: Promise<[Array<Record<string, any>>, Record<string, any> | undefined]> {
-	const items: Array<Record<string, any>> = []
-	let lastEvaluatedKey: Record<string, any> | undefined = params.lastEvaluatedKey
-	do {
-		const res = await params.get({
-			...params.commandInput,
-			ExclusiveStartKey: lastEvaluatedKey,
-			Limit: params.limit !== undefined ? params.limit - items.length : undefined
-		})
-		items.push(...res.Items!)
-		lastEvaluatedKey = res.LastEvaluatedKey
-	} while (lastEvaluatedKey !== undefined && !(params.limit && items.length === params.limit))
-	return [items, lastEvaluatedKey]
 }
 
 export function plurality(num: number) {

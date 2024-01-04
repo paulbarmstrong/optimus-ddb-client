@@ -44,3 +44,22 @@ export const connectionsTableResourceIdGsi = new Gsi({
 	indexName: "resource-id",
 	partitionKey: "resourceId"
 })
+
+export const livestreamShape = s.object({
+	id: s.string(),
+	category: s.literal("livestreams"),
+	viewerCount: s.integer({min: 0}),
+	metadata: s.class(Uint8Array)
+})
+export type Livestream = ShapeToType<typeof livestreamShape>
+export const livestreamsTable = new Table({
+	tableName: "Livestreams",
+	itemShape: livestreamShape,
+	partitionKey: "id"
+})
+export const livestreamsTableViewerCountGsi = new Gsi({
+	table: livestreamsTable,
+	indexName: "category-viewerCount",
+	partitionKey: "category",
+	sortKey: "viewerCount"
+})

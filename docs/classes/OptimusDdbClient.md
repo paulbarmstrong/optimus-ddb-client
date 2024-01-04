@@ -10,6 +10,10 @@ The overhead associated with an instance of OptimusDdbClient is similar to that 
 DynamoDBDocumentClient from the AWS SDK (that's because OptimusDdbClient creates a 
 DynamoDBDocumentClient).
 
+Most failure modes correspond to DynamoDBDocumentClient errors and in those cases OptimusDdbClient
+lets such errors propagate out to the caller. OptimusDdbClient also has some of its own errors types
+and those are mentioned on each function documentation.
+
 ## Table of contents
 
 ### Constructors
@@ -46,7 +50,7 @@ DynamoDBDocumentClient).
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:35](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L35)
+[src/classes/OptimusDdbClient.ts:40](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L40)
 
 ## Methods
 
@@ -79,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:276](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L276)
+[src/classes/OptimusDdbClient.ts:302](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L302)
 
 ___
 
@@ -118,7 +122,7 @@ ItemShapeValidationError if the item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L54)
+[src/classes/OptimusDdbClient.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L59)
 
 ___
 
@@ -164,7 +168,7 @@ ItemShapeValidationError if the item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:85](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L85)
+[src/classes/OptimusDdbClient.ts:90](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L90)
 
 ___
 
@@ -189,7 +193,7 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:386](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L386)
+[src/classes/OptimusDdbClient.ts:412](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L412)
 
 ___
 
@@ -214,7 +218,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.itemNotFoundErrorOverride?` | (`e`: [`ItemNotFoundError`](ItemNotFoundError.md)) => `undefined` \| `Error` | Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItems` will omit the item from its response instead of throwing `ItemNotFoundError`. |
-| `params.keys` | \{ [T in string \| number \| symbol]: ShapeToType\<I[P]\> } & \{ [T in string \| number \| symbol]: ShapeToType\<I[S]\> }[] | Keys to look up. The limit is 100. |
+| `params.keys` | \{ [T in string \| number \| symbol]: ShapeToType\<I[P]\> } & \{ [T in string \| number \| symbol]: ShapeToType\<I[S]\> }[] | Keys to look up. |
 | `params.table` | [`Table`](Table.md)\<`I`, `P`, `S`\> | Table to look in. |
 
 #### Returns
@@ -226,7 +230,8 @@ All of the items with the given keys (or just the items that were found if
 
 **`Throws`**
 
-UnprocessedKeysError if there are any unprocessed keys.
+UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
+keys while it is calling BatchGetItem.
 
 **`Throws`**
 
@@ -238,7 +243,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:128](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L128)
+[src/classes/OptimusDdbClient.ts:134](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L134)
 
 ___
 
@@ -262,7 +267,7 @@ deleted in DynamoDB once it is included in the `items` of a call to `commitItems
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:67](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L67)
+[src/classes/OptimusDdbClient.ts:72](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L72)
 
 ___
 
@@ -271,7 +276,9 @@ ___
 ▸ **queryItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeObjectToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
-https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html).
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html). It may also call [
+the BatchGetItem DynamoDB API](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html)
+when it queries items from GSIs that don't project the attributes defined by the Table's itemShape.
 
 #### Type parameters
 
@@ -311,11 +318,17 @@ InvalidNextTokenError if the nextToken parameter is invalid.
 
 **`Throws`**
 
+UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
+keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
+by the Table's itemShape).
+
+**`Throws`**
+
 ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:179](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L179)
+[src/classes/OptimusDdbClient.ts:208](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L208)
 
 ___
 
@@ -361,8 +374,14 @@ InvalidNextTokenError if the nextToken parameter is invalid.
 
 **`Throws`**
 
+UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
+keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
+by the Table's itemShape).
+
+**`Throws`**
+
 ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:234](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L234)
+[src/classes/OptimusDdbClient.ts:263](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L263)

@@ -13,7 +13,6 @@ An abstracted version number attribute facilitates optimistic locking. When cons
 ### Requirements
 
 1. Any existing items of tables to be used with OptimusDdbClient should have an N attribute to use for optimistic locking. It should be specified in the `Table` constructor's `versionAttribute` parameter. The default is "version".
-2. GSIs to be used with OptimusDdbClient should have all attributes projected.
 
 ### Installation
 ```

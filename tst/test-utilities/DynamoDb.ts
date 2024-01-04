@@ -5,7 +5,7 @@ import { LiteralShape, NumberShape, StringShape, UnionShape } from "shape-tape"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { DYNAMO_DB_LOCAL_CLIENT_CONFIG } from "./Constants"
 
-export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array<Gsi<any,any,any>>)
+export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array<Gsi<any,any,any>>, gsiProjectionType: "ALL" | "KEYS_ONLY" = "ALL")
 		: Promise<[OptimusDdbClient, DynamoDBDocumentClient]> {
 	const dynamoDb: DynamoDBClient = new DynamoDBClient(DYNAMO_DB_LOCAL_CLIENT_CONFIG)
 	const existingTables: Array<string> = (await dynamoDb.send(new ListTablesCommand({}))).TableNames!
@@ -18,7 +18,7 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 		const globalSecondaryIndexes = tableGsis.map(gsi => {
 			return {
 				IndexName: gsi.indexName,
-				Projection: { ProjectionType: "ALL" as "ALL" },
+				Projection: { ProjectionType: gsiProjectionType },
 				KeySchema: [
 					{ AttributeName: gsi.partitionKey, KeyType: "HASH" as "HASH" },
 					...(gsi.sortKey ? [{ AttributeName: gsi.sortKey, KeyType: "RANGE" as "RANGE" }] : [])

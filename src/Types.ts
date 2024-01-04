@@ -41,9 +41,10 @@ export type FilterCondition<L, R> = [L, "exists" | "doesn't exist"] | (R extends
 export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exist"]
 
 /**
- * Error for when OptimusDdbClient's `getItems` ends with unprocessedKeys. Please see [the DynamoDB
- * documentation](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html)
- * for why that may happen.
+ * Error for when OptimusDdbClient's `getItems` ends with unprocessedKeys. Unfortunately DynamoDB
+ * doesn't specify the reason for the items being unprocessed. Please see [the DynamoDB documentation
+ * ](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) for why
+ * that may happen.
  */
 export class UnprocessedKeysError extends Error {
 	name = "ItemNotFoundError"
@@ -98,5 +99,12 @@ export class ItemShapeValidationError extends ShapeValidationError {
 	name = "ItemShapeValidationError"
 	constructor(params: ConstructorParameters<typeof ShapeValidationError>[0]) {
 		super(params)
+	}
+}
+
+/** @hidden */
+export class ItemWithoutVersionError extends Error {
+	constructor(message: string) {
+		super(message)
 	}
 }

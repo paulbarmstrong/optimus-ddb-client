@@ -1,14 +1,15 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
-	ScanCommandInput } from "@aws-sdk/lib-dynamodb"
+	ScanCommandInput,  QueryCommandOutput, ScanCommandOutput} from "@aws-sdk/lib-dynamodb"
 import { ShapeToType, validateDataShape } from "shape-tape"
-import { AnyToNever, FilterCondition, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, OptimisticLockError,
+import { AnyToNever, FilterCondition, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, OptimisticLockError,
 	PartitionKeyCondition, ShapeObject, ShapeObjectToType } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getItemsPages, getLastEvaluatedKeyShape, shallowEquals } from "../Utilities"
+import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape, shallowEquals } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
 import { SortKeyCondition, UnprocessedKeysError } from "../Types"
+import { ItemsPagesIterator } from "./ItemsPagesIterator"
 
 type ItemData = {
 	table: Table<any, any, any>,
@@ -26,6 +27,10 @@ type ItemData = {
  * The overhead associated with an instance of OptimusDdbClient is similar to that of
  * DynamoDBDocumentClient from the AWS SDK (that's because OptimusDdbClient creates a 
  * DynamoDBDocumentClient).
+ * 
+ * Most failure modes correspond to DynamoDBDocumentClient errors and in those cases OptimusDdbClient
+ * lets such errors propagate out to the caller. OptimusDdbClient also has some of its own errors types
+ * and those are mentioned on each function documentation.
  */
 export class OptimusDdbClient {
 	/** @hidden */
@@ -121,7 +126,8 @@ export class OptimusDdbClient {
 	 * 
 	 * @returns All of the items with the given keys (or just the items that were found if 
 	 * `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
-	 * @throws UnprocessedKeysError if there are any unprocessed keys.
+	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
+	 * keys while it is calling BatchGetItem.
 	 * @throws ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
@@ -185,13 +191,18 @@ export class OptimusDdbClient {
 	
 	/**
 	 * Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
-	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html).
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html). It may also call [
+	 * the BatchGetItem DynamoDB API](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html)
+	 * when it queries items from GSIs that don't project the attributes defined by the Table's itemShape.
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
 	 * * [1] Either a nextToken if there's more to query after reaching the `limit`, or undefined. It's always
 	 * undefined if `limit` is not set.
 	 * @throws InvalidNextTokenError if the nextToken parameter is invalid.
+	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
+	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
+	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
 	async queryItems<I extends ShapeObject, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
@@ -214,28 +225,25 @@ export class OptimusDdbClient {
 		/** Optional parameter to override `InvalidNextTokenError`. */
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
-		const queryCommandInput: QueryCommandInput = {
-			TableName: getIndexTable(params.index).tableName,
-			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
-			ConsistentRead: params.index instanceof Table,
-			...getDynamoDbExpression({
-				partitionKeyCondition: params.partitionKeyCondition,
-				sortKeyCondition: params.sortKeyCondition,
-				filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
-			}),
-			ScanIndexForward: params.scanIndexForward
-		}
-		const [items, lastEvaluatedKey] = await getItemsPages({
-			commandInput: queryCommandInput,
+		const [items, nextToken] = await this.#handleQueryOrScan({
+			index: params.index,
+			commandInput: {
+				TableName: getIndexTable(params.index).tableName,
+				IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
+				ConsistentRead: params.index instanceof Table,
+				...getDynamoDbExpression({
+					partitionKeyCondition: params.partitionKeyCondition,
+					sortKeyCondition: params.sortKeyCondition,
+					filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
+				}),
+				ScanIndexForward: params.scanIndexForward
+			},
 			get: input => this.#ddbDocumentClient.send(new QueryCommand(input)),
 			limit: params.limit,
-			lastEvaluatedKey: decodeNextToken(params.nextToken, getLastEvaluatedKeyShape(params.index),
-				params.invalidNextTokenErrorOverride)
+			nextToken: params.nextToken,
+			invalidNextTokenErrorOverride: params.invalidNextTokenErrorOverride
 		})
-		return [
-			items.map(item => this.#recordAndStripItem(item, getIndexTable(params.index), false)),
-			encodeNextToken(lastEvaluatedKey) as L extends number ? string | undefined : undefined
-		]
+		return [items, nextToken as L extends number ? string | undefined : undefined]
 	}
 	
 	/**
@@ -247,6 +255,9 @@ export class OptimusDdbClient {
 	 * * [1] Either a nextToken if there's more to scan after reaching the `limit`, or undefined. It's always
 	 * undefined if `limit` is not set.
 	 * @throws InvalidNextTokenError if the nextToken parameter is invalid.
+	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
+	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
+	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
 	async scanItems<I extends ShapeObject, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
@@ -263,25 +274,22 @@ export class OptimusDdbClient {
 		/** Optional parameter to override `InvalidNextTokenError`. */
 		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
 	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
-		const scanCommandInput: ScanCommandInput = {
-			TableName: getIndexTable(params.index).tableName,
-			IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
-			ConsistentRead: params.index instanceof Table,
-			...getDynamoDbExpression({
-				filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
-			})
-		}
-		const [items, lastEvaluatedKey] = await getItemsPages({
-			commandInput: scanCommandInput,
+		const [items, nextToken] = await this.#handleQueryOrScan({
+			index: params.index,
+			commandInput: {
+				TableName: getIndexTable(params.index).tableName,
+				IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
+				ConsistentRead: params.index instanceof Table,
+				...getDynamoDbExpression({
+					filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
+				})
+			},
 			get: input => this.#ddbDocumentClient.send(new ScanCommand(input)),
 			limit: params.limit,
-			lastEvaluatedKey: decodeNextToken(params.nextToken, getLastEvaluatedKeyShape(params.index),
-				params.invalidNextTokenErrorOverride)
+			nextToken: params.nextToken,
+			invalidNextTokenErrorOverride: params.invalidNextTokenErrorOverride
 		})
-		return [
-			items.map(item => this.#recordAndStripItem(item, getIndexTable(params.index), false)),
-			encodeNextToken(lastEvaluatedKey) as L extends number ? string | undefined : undefined
-		]
+		return [items, nextToken as L extends number ? string | undefined : undefined]
 	}
 	
 	/**
@@ -415,7 +423,7 @@ export class OptimusDdbClient {
 	#recordAndStripItem<I extends ShapeObject, P extends keyof I, S extends keyof I>
 			(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
 		if (!create && !Number.isInteger(item[table.versionAttribute]))
-			throw new Error(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
+			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
 		const version = create ? 0 : item[table.versionAttribute]
 		delete item[table.versionAttribute]
 		const validatedItem: ShapeToType<typeof table.itemShape> = validateDataShape({
@@ -452,5 +460,46 @@ export class OptimusDdbClient {
 			ExpressionAttributeNames: builder.attributeNames,
 			ExpressionAttributeValues: builder.attributeValues
 		}
+	}
+
+	/** @hidden */
+	async #handleQueryOrScan<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
+		index: Table<I,P,S> | Gsi<I,P,S>
+        commandInput: QueryCommandInput | ScanCommandInput,
+        get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
+		limit: number | undefined,
+        nextToken: string | undefined,
+		invalidNextTokenErrorOverride: ((e: InvalidNextTokenError) => Error) | undefined
+	}): Promise<[Array<ShapeObjectToType<I>>, string | undefined]> {
+		const table = getIndexTable(params.index)
+		const itemsPagesIterator = new ItemsPagesIterator({
+			commandInput: params.commandInput,
+			get: params.get,
+			limit: params.limit,
+			lastEvaluatedKey: decodeNextToken(params.nextToken, getLastEvaluatedKeyShape(params.index), params.invalidNextTokenErrorOverride)
+		})
+		const items: Array<ShapeObjectToType<I>> = []
+		while (itemsPagesIterator.hasNext()) {
+			const page = await itemsPagesIterator.next()
+			const incompleteItems: Array<Record<string,any>> = []
+			page.forEach(item => {
+				try {
+					items.push(this.#recordAndStripItem(item, table, false))
+				} catch (error) {
+					if (params.index instanceof Gsi && 
+						(error instanceof ItemWithoutVersionError || (error instanceof ItemShapeValidationError && error.data === undefined))) {
+						incompleteItems.push(item)
+					} else {
+						throw error
+					}
+				}
+			})
+			const incompleteItemKeys: any = incompleteItems.map(item => Object.fromEntries(Object.entries(item).filter(attr => table.keyAttributes.includes(attr[0]))))
+			items.push(...(await this.getItems({ table: table, keys: incompleteItemKeys, itemNotFoundErrorOverride: () => undefined })))
+		}
+		return [
+			items,
+			encodeNextToken(itemsPagesIterator.lastEvaluatedKey)
+		]
 	}
 }

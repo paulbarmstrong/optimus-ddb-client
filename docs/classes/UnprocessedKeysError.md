@@ -2,9 +2,10 @@
 
 # Class: UnprocessedKeysError
 
-Error for when OptimusDdbClient's `getItems` ends with unprocessedKeys. Please see [the DynamoDB
-documentation](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html)
-for why that may happen.
+Error for when OptimusDdbClient's `getItems` ends with unprocessedKeys. Unfortunately DynamoDB
+doesn't specify the reason for the items being unprocessed. Please see [the DynamoDB documentation
+](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) for why
+that may happen.
 
 ## Hierarchy
 
@@ -55,7 +56,7 @@ Error.constructor
 
 #### Defined in
 
-[src/Types.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L51)
+[src/Types.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L52)
 
 ## Properties
 
@@ -97,7 +98,7 @@ Error.name
 
 #### Defined in
 
-[src/Types.ts:49](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L49)
+[src/Types.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L50)
 
 ___
 
@@ -121,7 +122,7 @@ ___
 
 #### Defined in
 
-[src/Types.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L50)
+[src/Types.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L51)
 
 ___
 
