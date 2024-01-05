@@ -144,26 +144,21 @@ export class OptimusDdbClient {
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
 	}): Promise<Array<ShapeObjectToType<I>>> {
 		if (params.keys.length === 0) return []
-		let prevUnprocessedKeys: Array<Record<string,any>> = []
 		const unfinishedKeys: Array<Record<string,any>> = [...params.keys]
 		const finishedItems: Array<Record<string,any>> = []
 		while (unfinishedKeys.length > 0) {
+			const currentAttemptedKeys = unfinishedKeys.splice(0, 100)
 			const res = await this.#ddbDocumentClient.send(new BatchGetCommand({
 				RequestItems: {
 					[params.table.tableName]: {
-						Keys: unfinishedKeys.splice(0, 100),
+						Keys: currentAttemptedKeys,
 						ConsistentRead: true
 					}
 				}
 			}))
-			const items = res.Responses![params.table.tableName]
 			const unproccessedKeys = res.UnprocessedKeys !== undefined ? Object.values(res.UnprocessedKeys).map(x => x.Keys!) : []
-			const doubleUnprocessedKeys = prevUnprocessedKeys.filter(x => unproccessedKeys.find(y => shallowEquals(x, y)) !== undefined)
-			if (doubleUnprocessedKeys.length > 0) {
-				throw new UnprocessedKeysError({ unprocessedKeys: doubleUnprocessedKeys })
-			}
-			finishedItems.push(...items)
-			prevUnprocessedKeys = unproccessedKeys
+			if (unproccessedKeys.length === currentAttemptedKeys.length) throw new UnprocessedKeysError({ unprocessedKeys: unproccessedKeys })
+			finishedItems.push(...res.Responses![params.table.tableName])
 			unfinishedKeys.push(...unproccessedKeys)
 		}
 		if (finishedItems.length !== params.keys.length) {
@@ -183,7 +178,6 @@ export class OptimusDdbClient {
 			params.keys.find(key => params.table.keyAttributes.filter(keyAttr => (key as any)[keyAttr] !== item[keyAttr]).length === 0)!,
 			item
 		]))
-
 		return Array.from(params.keys.map(key => finishedItemsMap.get(key)))
 			.filter(item => item !== undefined)
 			.map(item => this.#recordAndStripItem(item, params.table, false))
@@ -248,7 +242,10 @@ export class OptimusDdbClient {
 	
 	/**
 	 * Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
-	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html).
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html). It may also call 
+	 * [the BatchGetItem DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans
+	 * items from GSIs that don't project the attributes defined by the Table's itemShape.
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).

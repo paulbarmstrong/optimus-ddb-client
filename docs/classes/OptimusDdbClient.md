@@ -83,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:302](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L302)
+[src/classes/OptimusDdbClient.ts:299](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L299)
 
 ___
 
@@ -193,7 +193,7 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:412](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L412)
+[src/classes/OptimusDdbClient.ts:409](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L409)
 
 ___
 
@@ -328,7 +328,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:208](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L208)
+[src/classes/OptimusDdbClient.ts:202](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L202)
 
 ___
 
@@ -337,7 +337,10 @@ ___
 ▸ **scanItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeObjectToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
-https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html).
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html). It may also call 
+[the BatchGetItem DynamoDB API](
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans
+items from GSIs that don't project the attributes defined by the Table's itemShape.
 
 #### Type parameters
 
@@ -384,4 +387,4 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:263](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L263)
+[src/classes/OptimusDdbClient.ts:260](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L260)

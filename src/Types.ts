@@ -41,16 +41,21 @@ export type FilterCondition<L, R> = [L, "exists" | "doesn't exist"] | (R extends
 export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exist"]
 
 /**
- * Error for when OptimusDdbClient's `getItems` ends with unprocessedKeys. Unfortunately DynamoDB
- * doesn't specify the reason for the items being unprocessed. Please see [the DynamoDB documentation
+ * Error for when OptimusDdbClient is unable to get DynamoDB to process one or more
+ * keys while it is calling BatchGetItem. ends with unprocessedKeys. DynamoDB doesn't
+ * specify the reason for the items being unprocessed. Please see [the DynamoDB BatchGetItem documentation
  * ](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) for why
  * that may happen.
+ * 
+ * OptimusDdbClient's retry strategy for BatchGetItem is to keep calling with up to 100 keys
+ * at a time until either it gets everything it needs or there's a call where every key
+ * it asks for comes back in UnproccessedKeys.
  */
 export class UnprocessedKeysError extends Error {
 	name = "ItemNotFoundError"
 	readonly unprocessedKeys: Array<Record<string,any>>
 	constructor(params: { unprocessedKeys: Array<Record<string,any>> }) {
-		super(`Error processing ${params.unprocessedKeys} keys.`)
+		super(`Error processing ${params.unprocessedKeys.length} keys.`)
 		this.unprocessedKeys = params.unprocessedKeys
 	}
 }
