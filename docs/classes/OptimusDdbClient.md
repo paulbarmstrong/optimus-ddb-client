@@ -11,7 +11,7 @@ DynamoDBDocumentClient from the AWS SDK (that's because OptimusDdbClient creates
 DynamoDBDocumentClient).
 
 Most failure modes correspond to DynamoDBDocumentClient errors and in those cases OptimusDdbClient
-lets such errors propagate out to the caller. OptimusDdbClient also has some of its own errors types
+lets the error propagate out to the caller. OptimusDdbClient also has some of its own errors types
 and those are mentioned on each function documentation.
 
 ## Table of contents
@@ -83,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:299](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L299)
+[src/classes/OptimusDdbClient.ts:301](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L301)
 
 ___
 
@@ -193,7 +193,7 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:409](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L409)
+[src/classes/OptimusDdbClient.ts:411](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L411)
 
 ___
 
@@ -296,10 +296,10 @@ when it queries items from GSIs that don't project the attributes defined by the
 | `params` | `Object` | - |
 | `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, ShapeToType\<I[K]\>\> }[`Exclude`\<`Exclude`\<keyof `I`, `P`\>, `S`\>][] | Optional list of conditions to filter down the results. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to query. |
-| `params.invalidNextTokenErrorOverride?` | (`e`: [`InvalidNextTokenError`](InvalidNextTokenError.md)) => `Error` | Optional parameter to override `InvalidNextTokenError`. |
+| `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
-| `params.nextToken?` | `string` | Optional parameter to continue based on a nextToken returned from an earlier `queryItems` call. |
 | `params.partitionKeyCondition` | [`PartitionKeyCondition`](../index.md#partitionkeycondition)\<`P`, `ShapeToType`\<`I`[`P`]\>\> | Condition to specify which partition the Query will take place in. |
+| `params.resumeKey?` | `string` | Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. |
 | `params.scanIndexForward?` | `boolean` | Optional parameter used to switch the order of the query. |
 | `params.sortKeyCondition?` | `AnyToNever`\<`ShapeToType`\<`I`[`S`]\>\> extends `never` ? `never` : [`SortKeyCondition`](../index.md#sortkeycondition)\<`S`, `ShapeToType`\<`I`[`S`]\>\> | Optional condition to specify how the partition will be queried. |
 
@@ -309,12 +309,13 @@ when it queries items from GSIs that don't project the attributes defined by the
 
 A tuple:
 * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
-* [1] Either a nextToken if there's more to query after reaching the `limit`, or undefined. It's always
-undefined if `limit` is not set.
+* [1] Either a `resumeKey` if there's more to query after reaching the `limit`, or undefined. It's always
+undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+attribute names and values from the DynamoDB table.
 
 **`Throws`**
 
-InvalidNextTokenError if the nextToken parameter is invalid.
+InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 
 **`Throws`**
 
@@ -328,7 +329,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:202](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L202)
+[src/classes/OptimusDdbClient.ts:203](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L203)
 
 ___
 
@@ -358,9 +359,9 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 | `params` | `Object` | - |
 | `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, ShapeToType\<I[K]\>\> }[keyof `I`][] | Optional list of conditions to filter down the results. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to scan. |
-| `params.invalidNextTokenErrorOverride?` | (`e`: [`InvalidNextTokenError`](InvalidNextTokenError.md)) => `Error` | Optional parameter to override `InvalidNextTokenError`. |
+| `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
-| `params.nextToken?` | `string` | Optional parameter to continue based on a nextToken returned from an earlier `scanItems` call. |
+| `params.resumeKey?` | `string` | Optional parameter to continue based on a `resumeKey` returned from an earlier `scanItems` call. |
 
 #### Returns
 
@@ -368,12 +369,13 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 
 A tuple:
 * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
-* [1] Either a nextToken if there's more to scan after reaching the `limit`, or undefined. It's always
-undefined if `limit` is not set.
+* [1] Either a `resumeKey` if there's more to scan after reaching the `limit`, or undefined. It's always
+undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+attribute names and values from the DynamoDB table.
 
 **`Throws`**
 
-InvalidNextTokenError if the nextToken parameter is invalid.
+InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 
 **`Throws`**
 
@@ -387,4 +389,4 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:260](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L260)
+[src/classes/OptimusDdbClient.ts:262](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L262)

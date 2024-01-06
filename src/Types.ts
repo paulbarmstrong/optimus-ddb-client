@@ -88,12 +88,12 @@ export class OptimisticLockError extends Error {
 }
 
 /**
- * Error for when OptimusDdbClient is given an invalid nextToken.
+ * Error for when OptimusDdbClient is given an invalid resumeKey.
  */
-export class InvalidNextTokenError extends Error {
-	name = "InvalidNextTokenError"
+export class InvalidResumeKeyError extends Error {
+	name = "InvalidResumeKeyError"
 	constructor() {
-		super("Invalid nextToken.")
+		super("Invalid resumeKey.")
 	}
 }
 

@@ -1,43 +1,43 @@
-[optimus-ddb-client](../index.md) / InvalidNextTokenError
+[optimus-ddb-client](../index.md) / InvalidResumeKeyError
 
-# Class: InvalidNextTokenError
+# Class: InvalidResumeKeyError
 
-Error for when OptimusDdbClient is given an invalid nextToken.
+Error for when OptimusDdbClient is given an invalid resumeKey.
 
 ## Hierarchy
 
 - `Error`
 
-  ↳ **`InvalidNextTokenError`**
+  ↳ **`InvalidResumeKeyError`**
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](InvalidNextTokenError.md#constructor)
+- [constructor](InvalidResumeKeyError.md#constructor)
 
 ### Properties
 
-- [cause](InvalidNextTokenError.md#cause)
-- [message](InvalidNextTokenError.md#message)
-- [name](InvalidNextTokenError.md#name)
-- [stack](InvalidNextTokenError.md#stack)
-- [prepareStackTrace](InvalidNextTokenError.md#preparestacktrace)
-- [stackTraceLimit](InvalidNextTokenError.md#stacktracelimit)
+- [cause](InvalidResumeKeyError.md#cause)
+- [message](InvalidResumeKeyError.md#message)
+- [name](InvalidResumeKeyError.md#name)
+- [stack](InvalidResumeKeyError.md#stack)
+- [prepareStackTrace](InvalidResumeKeyError.md#preparestacktrace)
+- [stackTraceLimit](InvalidResumeKeyError.md#stacktracelimit)
 
 ### Methods
 
-- [captureStackTrace](InvalidNextTokenError.md#capturestacktrace)
+- [captureStackTrace](InvalidResumeKeyError.md#capturestacktrace)
 
 ## Constructors
 
 ### constructor
 
-• **new InvalidNextTokenError**(): [`InvalidNextTokenError`](InvalidNextTokenError.md)
+• **new InvalidResumeKeyError**(): [`InvalidResumeKeyError`](InvalidResumeKeyError.md)
 
 #### Returns
 
-[`InvalidNextTokenError`](InvalidNextTokenError.md)
+[`InvalidResumeKeyError`](InvalidResumeKeyError.md)
 
 #### Overrides
 
@@ -79,7 +79,7 @@ ___
 
 ### name
 
-• **name**: `string` = `"InvalidNextTokenError"`
+• **name**: `string` = `"InvalidResumeKeyError"`
 
 #### Overrides
 

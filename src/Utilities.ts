@@ -1,6 +1,6 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
-import { ConditionCondition, FilterCondition, InvalidNextTokenError, PartitionKeyCondition, ShapeObject, SortKeyCondition } from "./Types"
+import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKeyCondition, ShapeObject, SortKeyCondition } from "./Types"
 import { Shape, ShapeToType, s, validateDataShape }  from "shape-tape"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
@@ -74,25 +74,25 @@ export function getDynamoDbConditionExpressionString<L,R>
 	}
 }
 
-export function encodeNextToken<T extends Record<string, any>>(lastEvaluatedKey: T | undefined): string | undefined {
+export function encodeResumeKey<T extends Record<string, any>>(lastEvaluatedKey: T | undefined): string | undefined {
 	if (lastEvaluatedKey === undefined) return undefined
-	return Buffer.from(JSON.stringify(lastEvaluatedKey), "utf-8").toString("base64")
+	return JSON.stringify(lastEvaluatedKey)
 }
 
-export function decodeNextToken<T extends Shape>(nextToken: string | undefined, keyShape: T,
-		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error)
+export function decodeResumeKey<T extends Shape>(resumeKey: string | undefined, keyShape: T,
+		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error)
 		: ShapeToType<typeof keyShape> | undefined {
-	if (nextToken === undefined) return undefined
+	if (resumeKey === undefined) return undefined
 	try {
 		return validateDataShape({
-			data: JSON.parse(Buffer.from(nextToken, "base64").toString()),
+			data: JSON.parse(resumeKey),
 			shape: keyShape
 		})
 	} catch (error) {
-		if (invalidNextTokenErrorOverride !== undefined) {
-			throw invalidNextTokenErrorOverride(new InvalidNextTokenError())
+		if (invalidResumeKeyErrorOverride !== undefined) {
+			throw invalidResumeKeyErrorOverride(new InvalidResumeKeyError())
 		} else {
-			throw new InvalidNextTokenError()
+			throw new InvalidResumeKeyError()
 		}
 	}
 }
@@ -132,14 +132,4 @@ export function getIndexTable<I extends ShapeObject, P extends keyof I, S extend
 	} else {
 		return index.table
 	}
-}
-
-export function shallowEquals(a: Record<string,any>, b: Record<string,any>) {
-	for (const key in a) {
-		if (!(key in b) || a[key] !== b[key]) return false
-	}
-	for (const key in b) {
-		if (!(key in a)) return false
-	}
-	return true
 }

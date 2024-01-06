@@ -9,7 +9,7 @@ This is low level documentation. Please see [README.md](../README.md) for the hi
 ### Classes
 
 - [Gsi](classes/Gsi.md)
-- [InvalidNextTokenError](classes/InvalidNextTokenError.md)
+- [InvalidResumeKeyError](classes/InvalidResumeKeyError.md)
 - [ItemNotFoundError](classes/ItemNotFoundError.md)
 - [ItemShapeValidationError](classes/ItemShapeValidationError.md)
 - [OptimisticLockError](classes/OptimisticLockError.md)

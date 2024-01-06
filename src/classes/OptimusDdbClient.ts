@@ -2,9 +2,9 @@ import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } fr
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput,  QueryCommandOutput, ScanCommandOutput} from "@aws-sdk/lib-dynamodb"
 import { ShapeToType, validateDataShape } from "shape-tape"
-import { AnyToNever, FilterCondition, InvalidNextTokenError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, OptimisticLockError,
-	PartitionKeyCondition, ShapeObject, ShapeObjectToType } from "../Types"
-import { decodeNextToken, encodeNextToken, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape, shallowEquals } from "../Utilities"
+import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
+	OptimisticLockError, PartitionKeyCondition, ShapeObject, ShapeObjectToType } from "../Types"
+import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -29,7 +29,7 @@ type ItemData = {
  * DynamoDBDocumentClient).
  * 
  * Most failure modes correspond to DynamoDBDocumentClient errors and in those cases OptimusDdbClient
- * lets such errors propagate out to the caller. OptimusDdbClient also has some of its own errors types
+ * lets the error propagate out to the caller. OptimusDdbClient also has some of its own errors types
  * and those are mentioned on each function documentation.
  */
 export class OptimusDdbClient {
@@ -191,9 +191,10 @@ export class OptimusDdbClient {
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
-	 * * [1] Either a nextToken if there's more to query after reaching the `limit`, or undefined. It's always
-	 * undefined if `limit` is not set.
-	 * @throws InvalidNextTokenError if the nextToken parameter is invalid.
+	 * * [1] Either a `resumeKey` if there's more to query after reaching the `limit`, or undefined. It's always
+	 * undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+	 * attribute names and values from the DynamoDB table.
+	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
 	 * by the Table's itemShape).
@@ -212,14 +213,14 @@ export class OptimusDdbClient {
 		}[Exclude<Exclude<keyof I, P>, S>]>,
 		/** Optional parameter used to switch the order of the query. */
 		scanIndexForward?: boolean,
+		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. */
+		resumeKey?: string,
 		/** Optional limit on the number of items to find before returning. */
 		limit?: L,
-		/** Optional parameter to continue based on a nextToken returned from an earlier `queryItems` call. */
-		nextToken?: string,
-		/** Optional parameter to override `InvalidNextTokenError`. */
-		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
+		/** Optional parameter to override `InvalidResumeKeyError`. */
+		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error
 	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
-		const [items, nextToken] = await this.#handleQueryOrScan({
+		const [items, resumeKey] = await this.#handleQueryOrScan({
 			index: params.index,
 			commandInput: {
 				TableName: getIndexTable(params.index).tableName,
@@ -233,11 +234,11 @@ export class OptimusDdbClient {
 				ScanIndexForward: params.scanIndexForward
 			},
 			get: input => this.#ddbDocumentClient.send(new QueryCommand(input)),
+			resumeKey: params.resumeKey,
 			limit: params.limit,
-			nextToken: params.nextToken,
-			invalidNextTokenErrorOverride: params.invalidNextTokenErrorOverride
+			invalidResumeKeyErrorOverride: params.invalidResumeKeyErrorOverride
 		})
-		return [items, nextToken as L extends number ? string | undefined : undefined]
+		return [items, resumeKey as L extends number ? string | undefined : undefined]
 	}
 	
 	/**
@@ -249,9 +250,10 @@ export class OptimusDdbClient {
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
-	 * * [1] Either a nextToken if there's more to scan after reaching the `limit`, or undefined. It's always
-	 * undefined if `limit` is not set.
-	 * @throws InvalidNextTokenError if the nextToken parameter is invalid.
+	 * * [1] Either a `resumeKey` if there's more to scan after reaching the `limit`, or undefined. It's always
+	 * undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+	 * attribute names and values from the DynamoDB table.
+	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
 	 * by the Table's itemShape).
@@ -264,14 +266,14 @@ export class OptimusDdbClient {
 		filterConditions?: Array<{
 			[K in keyof I]: FilterCondition<K, ShapeToType<I[K]>>
 		}[keyof I]>,
+		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `scanItems` call. */
+		resumeKey?: string,
 		/** Optional limit on the number of items to find before returning. */
 		limit?: L,
-		/** Optional parameter to continue based on a nextToken returned from an earlier `scanItems` call. */
-		nextToken?: string,
-		/** Optional parameter to override `InvalidNextTokenError`. */
-		invalidNextTokenErrorOverride?: (e: InvalidNextTokenError) => Error
+		/** Optional parameter to override `InvalidResumeKeyError`. */
+		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error
 	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
-		const [items, nextToken] = await this.#handleQueryOrScan({
+		const [items, resumeKey] = await this.#handleQueryOrScan({
 			index: params.index,
 			commandInput: {
 				TableName: getIndexTable(params.index).tableName,
@@ -282,11 +284,11 @@ export class OptimusDdbClient {
 				})
 			},
 			get: input => this.#ddbDocumentClient.send(new ScanCommand(input)),
+			resumeKey: params.resumeKey,
 			limit: params.limit,
-			nextToken: params.nextToken,
-			invalidNextTokenErrorOverride: params.invalidNextTokenErrorOverride
+			invalidResumeKeyErrorOverride: params.invalidResumeKeyErrorOverride
 		})
-		return [items, nextToken as L extends number ? string | undefined : undefined]
+		return [items, resumeKey as L extends number ? string | undefined : undefined]
 	}
 	
 	/**
@@ -465,15 +467,15 @@ export class OptimusDdbClient {
         commandInput: QueryCommandInput | ScanCommandInput,
         get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
 		limit: number | undefined,
-        nextToken: string | undefined,
-		invalidNextTokenErrorOverride: ((e: InvalidNextTokenError) => Error) | undefined
+        resumeKey: string | undefined,
+		invalidResumeKeyErrorOverride: ((e: InvalidResumeKeyError) => Error) | undefined
 	}): Promise<[Array<ShapeObjectToType<I>>, string | undefined]> {
 		const table = getIndexTable(params.index)
 		const itemsPagesIterator = new ItemsPagesIterator({
 			commandInput: params.commandInput,
 			get: params.get,
 			limit: params.limit,
-			lastEvaluatedKey: decodeNextToken(params.nextToken, getLastEvaluatedKeyShape(params.index), params.invalidNextTokenErrorOverride)
+			lastEvaluatedKey: decodeResumeKey(params.resumeKey, getLastEvaluatedKeyShape(params.index), params.invalidResumeKeyErrorOverride)
 		})
 		const items: Array<ShapeObjectToType<I>> = []
 		while (itemsPagesIterator.hasNext()) {
@@ -496,7 +498,7 @@ export class OptimusDdbClient {
 		}
 		return [
 			items,
-			encodeNextToken(itemsPagesIterator.lastEvaluatedKey)
+			encodeResumeKey(itemsPagesIterator.lastEvaluatedKey)
 		]
 	}
 }

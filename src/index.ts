@@ -6,5 +6,5 @@
 export { Gsi } from "./classes/Gsi"
 export { OptimusDdbClient } from "./classes/OptimusDdbClient"
 export { Table } from "./classes/Table"
-export { UnprocessedKeysError, ItemNotFoundError, OptimisticLockError, InvalidNextTokenError, ItemShapeValidationError,
+export { UnprocessedKeysError, ItemNotFoundError, OptimisticLockError, InvalidResumeKeyError, ItemShapeValidationError,
     PartitionKeyCondition, SortKeyCondition, FilterCondition } from "./Types"

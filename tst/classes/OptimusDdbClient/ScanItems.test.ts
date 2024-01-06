@@ -1,6 +1,6 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { InvalidNextTokenError, OptimusDdbClient } from "../../../src"
+import { InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
 import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourcesTable } from "../../test-utilities/Constants"
 
 let optimus: OptimusDdbClient
@@ -181,63 +181,63 @@ describe("with normal tables", () => {
 	})
 
 	test("in pages", async () => {
-		const [resources0, nextToken0] = await optimus.scanItems({
+		const [resources0, resumeKey0] = await optimus.scanItems({
 			index: resourcesTable,
 			limit: 1
 		})
 		expect(resources0).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
 		])
-		expect(nextToken0).not.toStrictEqual(undefined)
-		const [resources1, nextToken1] = await optimus.scanItems({
+		expect(resumeKey0).not.toStrictEqual(undefined)
+		const [resources1, resumeKey1] = await optimus.scanItems({
 			index: resourcesTable,
 			limit: 1,
-			nextToken: nextToken0
+			resumeKey: resumeKey0
 		})
 		expect(resources1).toStrictEqual([
 			{ id: "bbbb", status: "available", updatedAt: 1702185591111 }
 		])
-		expect(nextToken1).not.toStrictEqual(undefined)
-		const [resources2, nextToken2] = await optimus.scanItems({
+		expect(resumeKey1).not.toStrictEqual(undefined)
+		const [resources2, resumeKey2] = await optimus.scanItems({
 			index: resourcesTable,
 			limit: 1,
-			nextToken: nextToken1
+			resumeKey: resumeKey1
 		})
 		expect(resources2).toStrictEqual([
 			{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
 		])
-		expect(nextToken2).not.toStrictEqual(undefined)
+		expect(resumeKey2).not.toStrictEqual(undefined)
 	})
 
-	test("invalid nextToken", async () => {
+	test("invalid resumeKey", async () => {
 		await expect(optimus.scanItems({
 			index: resourcesTable,
-			nextToken: "uihdwaulidnw"
-		})).rejects.toThrow(InvalidNextTokenError)
+			resumeKey: "uihdwaulidnw"
+		})).rejects.toThrow(InvalidResumeKeyError)
 	})
 
-	test("invalid nextToken with invalidNextTokenErrorOverride", async () => {
+	test("invalid resumeKey with invalidResumeKeyErrorOverride", async () => {
 		await expect(optimus.scanItems({
 			index: resourcesTable,
-			nextToken: "uihdwaulidnw",
-			invalidNextTokenErrorOverride: _ => new MyError()
+			resumeKey: "uihdwaulidnw",
+			invalidResumeKeyErrorOverride: _ => new MyError()
 		})).rejects.toThrow(MyError)
 	})
 
 	describe("from a gsi", () => {
 		test("=", async () => {
-			const [connections, nextToken] = await optimus.scanItems({
+			const [connections, resumeKey] = await optimus.scanItems({
 				index: connectionsTableResourceIdGsi,
 				filterConditions: [["updatedAt", "=", 1702186485444]]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
 			])
-			expect(nextToken).toBeUndefined
+			expect(resumeKey).toBeUndefined
 		})
 		
 		test("in pages", async () => {
-			const [connections0, nextToken0] = await optimus.queryItems({
+			const [connections0, resumeKey0] = await optimus.queryItems({
 				index: connectionsTableResourceIdGsi,
 				partitionKeyCondition: ["resourceId", "=", "dddd"],
 				limit: 1
@@ -245,17 +245,17 @@ describe("with normal tables", () => {
 			expect(connections0).toStrictEqual([
 				{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
 			])
-			expect(nextToken0).toBeDefined
-			const [connections1, nextToken1] = await optimus.queryItems({
+			expect(resumeKey0).toBeDefined
+			const [connections1, resumeKey1] = await optimus.queryItems({
 				index: connectionsTableResourceIdGsi,
 				partitionKeyCondition: ["resourceId", "=", "dddd"],
 				limit: 1,
-				nextToken: nextToken0
+				resumeKey: resumeKey0
 			})
 			expect(connections1).toStrictEqual([
 				{ id: "4999", resourceId: "dddd", updatedAt: 1702186465344 }
 			])
-			expect(nextToken1).toBeUndefined
+			expect(resumeKey1).toBeUndefined
 		})
 	})
 })

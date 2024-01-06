@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourcesTable } from "../../test-utilities/Constants"
-import { InvalidNextTokenError, OptimusDdbClient } from "../../../src"
+import { InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
 
 describe("with normal tables", () => {
 	let optimus: OptimusDdbClient
@@ -38,12 +38,12 @@ describe("with normal tables", () => {
 
 	describe("table with partition key only", () => {
 		test("no results", async () => {
-			const [resources, nextToken] = await optimus.queryItems({
+			const [resources, resumeKey] = await optimus.queryItems({
 				index: resourcesTable,
 				partitionKeyCondition: ["id", "=", "4567"]
 			})
 			expect(resources).toStrictEqual([])
-			expect(nextToken).toStrictEqual(undefined)
+			expect(resumeKey).toStrictEqual(undefined)
 		})
 
 		test("with a result", async () => {
@@ -64,25 +64,25 @@ describe("with normal tables", () => {
 		})
 
 		test("filter condition with result", async () => {
-			const [resources, nextToken] = await optimus.queryItems({
+			const [resources, resumeKey] = await optimus.queryItems({
 				index: resourcesTable,
 				partitionKeyCondition: ["id", "=", "aaaa"],
 				filterConditions: [["status", "<>", "deleted"]]
 			})
 			expect(resources).toStrictEqual([{ id: "aaaa", status: "available", updatedAt: 1702185430122 }])
-			expect(nextToken).toStrictEqual(undefined)
+			expect(resumeKey).toStrictEqual(undefined)
 		})
 	})
 
 	describe("table with sort key", () => {
 		describe("query by partition key only", () => {
 			test("no results", async () => {
-				const [connections, nextToken] = await optimus.queryItems({
+				const [connections, resumeKey] = await optimus.queryItems({
 					index: connectionsTable,
 					partitionKeyCondition: ["id", "=", "4567"]
 				})
 				expect(connections).toStrictEqual([])
-				expect(nextToken).toStrictEqual(undefined)
+				expect(resumeKey).toStrictEqual(undefined)
 			})
 
 			test("one result", async () => {
@@ -94,7 +94,7 @@ describe("with normal tables", () => {
 			})
 
 			test("multiple results", async () => {
-				const [connections, nextToken] = await optimus.queryItems({
+				const [connections, resumeKey] = await optimus.queryItems({
 					index: connectionsTable,
 					partitionKeyCondition: ["id", "=", "4568"]
 				})
@@ -103,11 +103,11 @@ describe("with normal tables", () => {
 					{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 },
 					{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
 				])
-				expect(nextToken).toStrictEqual(undefined)
+				expect(resumeKey).toStrictEqual(undefined)
 			})
 			
 			test("scanIndexForward=false", async () => {
-				const [connections, nextToken] = await optimus.queryItems({
+				const [connections, resumeKey] = await optimus.queryItems({
 					index: connectionsTable,
 					partitionKeyCondition: ["id", "=", "4568"],
 					scanIndexForward: false
@@ -117,7 +117,7 @@ describe("with normal tables", () => {
 					{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 },
 					{ id: "4568", resourceId: "aaaa", updatedAt: 1702186485444 }
 				])
-				expect(nextToken).toStrictEqual(undefined)
+				expect(resumeKey).toStrictEqual(undefined)
 			})
 		})
 		describe("= sort key condition", () => {
@@ -348,7 +348,7 @@ describe("with normal tables", () => {
 		})
 
 		test("in pages", async () => {
-			const [connections0, nextToken0] = await optimus.queryItems({
+			const [connections0, resumeKey0] = await optimus.queryItems({
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				limit: 2
@@ -357,23 +357,23 @@ describe("with normal tables", () => {
 				{ id: "4568", resourceId: "aaaa", updatedAt: 1702186485444 },
 				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 }
 			])
-			expect(nextToken0).toBeDefined
-			const [connections1, nextToken1] = await optimus.queryItems({
+			expect(resumeKey0).toBeDefined
+			const [connections1, resumeKey1] = await optimus.queryItems({
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				limit: 2,
-				nextToken: nextToken0
+				resumeKey: resumeKey0
 			})
 			expect(connections1).toStrictEqual([
 				{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
 			])
-			expect(nextToken1).toBeUndefined
+			expect(resumeKey1).toBeUndefined
 		})
 	})
 
 	describe("for a GSI", () => {
 		test("multiple results", async () => {
-			const [connections, nextToken0] = await optimus.queryItems({
+			const [connections, resumeKey0] = await optimus.queryItems({
 				index: connectionsTableResourceIdGsi,
 				partitionKeyCondition: ["resourceId", "=", "cccc"]
 			})
@@ -381,11 +381,11 @@ describe("with normal tables", () => {
 				{ id: "5555", resourceId: "cccc", updatedAt: 1702186486734 },
 				{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 },
 			])
-			expect(nextToken0).toBeUndefined
+			expect(resumeKey0).toBeUndefined
 		})
 
 		test("in pages", async () => {
-			const [connections0, nextToken0] = await optimus.queryItems({
+			const [connections0, resumeKey0] = await optimus.queryItems({
 				index: connectionsTableResourceIdGsi,
 				partitionKeyCondition: ["resourceId", "=", "cccc"],
 				limit: 1
@@ -393,34 +393,34 @@ describe("with normal tables", () => {
 			expect(connections0).toStrictEqual([
 				{ id: "5555", resourceId: "cccc", updatedAt: 1702186486734 }
 			])
-			expect(nextToken0).toBeDefined
-			const [connections1, nextToken1] = await optimus.queryItems({
+			expect(resumeKey0).toBeDefined
+			const [connections1, resumeKey1] = await optimus.queryItems({
 				index: connectionsTableResourceIdGsi,
 				partitionKeyCondition: ["resourceId", "=", "cccc"],
 				limit: 1,
-				nextToken: nextToken0
+				resumeKey: resumeKey0
 			})
 			expect(connections1).toStrictEqual([
 				{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
 			])
-			expect(nextToken1).toBeUndefined
+			expect(resumeKey1).toBeUndefined
 		})
 	})
 
-	test("invalid nextToken", async () => {
+	test("invalid resumeKey", async () => {
 		await expect(optimus.queryItems({
 			index: resourcesTable,
 			partitionKeyCondition: ["id", "=", "4568"],
-			nextToken: "uihdwaulidnw"
-		})).rejects.toThrow(InvalidNextTokenError)
+			resumeKey: "uihdwaulidnw"
+		})).rejects.toThrow(InvalidResumeKeyError)
 	})
 
-	test("invalid nextToken with invalidNextTokenErrorOverride", async () => {
+	test("invalid resumeKey with invalidResumeKeyErrorOverride", async () => {
 		await expect(optimus.queryItems({
 			index: resourcesTable,
 			partitionKeyCondition: ["id", "=", "4568"],
-			nextToken: "uihdwaulidnw",
-			invalidNextTokenErrorOverride: _ => new MyError()
+			resumeKey: "uihdwaulidnw",
+			invalidResumeKeyErrorOverride: _ => new MyError()
 		})).rejects.toThrow(MyError)
 	})
 })
