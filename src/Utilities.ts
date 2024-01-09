@@ -100,17 +100,17 @@ export function decodeResumeKey<T extends Shape>(resumeKey: string | undefined, 
 export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
 	const table = getIndexTable(index)
 	return s.object({
-		[table.partitionKey]: table.itemShape.object[table.partitionKey],
+		[table.partitionKey]: table.itemShape.propertyShapes[table.partitionKey],
 		...(table.sortKey !== undefined ? (
-			{ [table.sortKey]: table.itemShape.object[table.sortKey] }
+			{ [table.sortKey]: table.itemShape.propertyShapes[table.sortKey] }
 		) : (
 			{}
 		)),
 		...(index instanceof Gsi ? (
 			{
-				[index.partitionKey]: index.table.itemShape.object[index.partitionKey],
+				[index.partitionKey]: index.table.itemShape.propertyShapes[index.partitionKey],
 				...(index.sortKey !== undefined ? (
-					{ [index.sortKey]: index.table.itemShape.object[index.sortKey] }
+					{ [index.sortKey]: index.table.itemShape.propertyShapes[index.sortKey] }
 				) : (
 					{}
 				))

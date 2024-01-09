@@ -71,13 +71,13 @@ export class Table<I extends ShapeObject, P extends keyof I, S extends keyof I =
 		this.itemShape = params.itemShape
 		this.partitionKey = params.partitionKey
 		this.sortKey = params.sortKey
-		this.attributes = Object.keys(params.itemShape.object)
+		this.attributes = Object.keys(params.itemShape.propertyShapes)
 		this.keyAttributes = [
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])
 		]
 		this.versionAttribute = params.versionAttribute !== undefined ? params.versionAttribute.toString() : "version"
-		Object.keys(this.itemShape.object).forEach(attributeName => {
+		Object.keys(this.itemShape.propertyShapes).forEach(attributeName => {
 			if (attributeName === this.versionAttribute) {
 				throw new Error(`${this.tableName
 					} table's item shape includes reserved version attribute "${
