@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
-import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourcesTable } from "../../test-utilities/Constants"
+import { Gsi, InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
+import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourceEventsTable, resourcesTable } from "../../test-utilities/Constants"
 
 let optimus: OptimusDdbClient
 let dynamoDBDocumentClient: DynamoDBDocumentClient
@@ -60,10 +60,10 @@ describe("with normal tables", () => {
 	})
 
 	test("!=", async () => {
-		for (const neq of ["!=", "<>"]) {
+		for (const neq of ["!=", "<>"] as const) {
 			const [resources] = await optimus.scanItems({
 				index: resourcesTable,
-				filterConditions: [["status", neq as "!=" | "<>", "available"]]
+				filterConditions: [["status", neq, "available"]]
 			})
 			expect(resources).toStrictEqual([
 				{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
@@ -279,4 +279,58 @@ test("incomplete item in GSI", async () => {
 		{ id: "aaaa", category: "livestreams", viewerCount: 2, metadata: new Uint8Array(64) },
 		{ id: "bbbb", category: "livestreams", viewerCount: 3, metadata: new Uint8Array(64) }
 	])
+})
+
+describe("Table with UnionShape itemShape", () => {
+	const resourceEventsTableCommentGsi = new Gsi({
+		table: resourceEventsTable,
+		partitionKey: "type",
+		sortKey: "comment",
+		indexName: "comment"
+	})
+	let optimus: OptimusDdbClient
+	let ddbDocumentClient: DynamoDBDocumentClient
+	beforeAll(async () => {
+		const prepRes = await prepDdbTest([resourceEventsTable], [resourceEventsTableCommentGsi])
+		optimus = prepRes[0]
+		ddbDocumentClient = prepRes[1]
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "cccc", type: "new-comment", comment: "hi", version: 0 }
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "dddd", type: "new-comment", comment: "hello", version: 0 }
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "eeee", type: "title-change", title: "new document", version: 0 }
+		}))
+	})
+	test("2 pages", async () => {
+		const [results0, resumeKey0] = await optimus.scanItems({
+			index: resourceEventsTable,
+			filterConditions: [["type", "=", "new-comment"]],
+			limit: 1
+		})
+		expect(results0).toStrictEqual([{ id: "dddd", type: "new-comment", comment: "hello" }])
+		expect(typeof resumeKey0).toStrictEqual("string")
+		const [results1, resumeKey1] = await optimus.scanItems({
+			index: resourceEventsTable,
+			filterConditions: [["type", "=", "new-comment"]],
+			resumeKey: resumeKey0,
+			limit: 1
+		})
+		expect(results1).toStrictEqual([{ id: "cccc", type: "new-comment", comment: "hi" }])
+		expect(resumeKey1).toBeUndefined
+	})
+	test("where GSI PK isn't in every union member", async () => {
+		const [results] = await optimus.scanItems({
+			index: resourceEventsTableCommentGsi,
+			filterConditions: [["id", "!=", "cccc"]]
+		})
+		expect(results).toStrictEqual([
+			{ id: "dddd", type: "new-comment", comment: "hello" }
+		])
+	})
 })

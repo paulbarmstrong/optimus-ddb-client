@@ -1,7 +1,7 @@
 import { CreateTableCommand, DeleteTableCommand, DescribeTableCommand, DynamoDBClient, ListTablesCommand, ScalarAttributeType
 } from "@aws-sdk/client-dynamodb"
 import { Gsi, OptimusDdbClient, Table } from "../../src"
-import { LiteralShape, NumberShape, StringShape, UnionShape } from "shape-tape"
+import { LiteralShape, NumberShape, ObjectShape, Shape, StringShape, UnionShape, s } from "shape-tape"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { DYNAMO_DB_LOCAL_CLIENT_CONFIG } from "./Constants"
 
@@ -14,7 +14,6 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 	}))
 	await Promise.all(tables.map(async table => {
 		const tableGsis = gsis.filter(gsi => gsi.table.tableName === table.tableName)
-		const itemShapeObject = table.itemShape.propertyShapes
 		const globalSecondaryIndexes = tableGsis.map(gsi => {
 			return {
 				IndexName: gsi.indexName,
@@ -33,7 +32,7 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 			BillingMode: "PAY_PER_REQUEST",
 			AttributeDefinitions: [...new Set(attributeNames)].map(attributeName => ({
 				AttributeName: attributeName,
-				AttributeType: shapeToDdbAttributeType(itemShapeObject[attributeName] as any)
+				AttributeType: shapeToDdbAttributeType(getItemShapePropertyValueShape(table, attributeName))
 			})),
 			KeySchema: [
 				{ AttributeName: table.partitionKey, KeyType: "HASH" as "HASH" },
@@ -54,10 +53,21 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 	return [new OptimusDdbClient({ dynamoDbClientConfig: DYNAMO_DB_LOCAL_CLIENT_CONFIG }), DynamoDBDocumentClient.from(dynamoDb)]
 }
 
-function shapeToDdbAttributeType(shape: StringShape | NumberShape | LiteralShape<any> | UnionShape<any>): ScalarAttributeType {
+function shapeToDdbAttributeType(shape: Shape): ScalarAttributeType {
 	if (shape instanceof NumberShape) {
 		return "N"
 	} else {
 		return "S"
+	}
+}
+
+function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): Shape {
+	if (table.itemShape.propertyShapes !== undefined) {
+		return table.itemShape.propertyShapes[attributeName]
+	} else {
+		const specificMembers: Array<Shape> = (table.itemShape.memberShapes as Array<ObjectShape<any>>)
+			.filter(member => Object.keys(member.propertyShapes).includes(attributeName))
+			.map(member => member.propertyShapes[attributeName])
+		return s.union(specificMembers)
 	}
 }

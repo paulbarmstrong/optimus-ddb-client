@@ -1,9 +1,9 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput,  QueryCommandOutput, ScanCommandOutput} from "@aws-sdk/lib-dynamodb"
-import { ShapeToType, validateDataShape } from "shape-tape"
+import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-tape"
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
-	OptimisticLockError, PartitionKeyCondition, ShapeObject, ShapeObjectToType } from "../Types"
+	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
 import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
@@ -56,12 +56,13 @@ export class OptimusDdbClient {
 	 * @returns The drafted item.
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	draftItem<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
+	draftItem<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I>, 
+			T extends ShapeToType<I>>(params: {
 		/** Table where the item should go. */
 		table: Table<I,P,S>,
 		/** Object representing the item to be drafted. It should be an object not provided to OptimusDdbClient before. */
-		item: ShapeObjectToType<I>
-	}): ShapeObjectToType<I> {
+		item: T
+	}): T {
 		return this.#recordAndStripItem({ ...params.item }, params.table, true)
 	}
 
@@ -87,18 +88,19 @@ export class OptimusDdbClient {
 	 * @throws ItemNotFoundError if the item is not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	async getItem<I extends ShapeObject, P extends keyof I, S extends keyof I, E extends Error | undefined = Error>(params: {
+	async getItem<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>,
+			S extends keyof ShapeToType<I>, E extends Error | undefined = Error>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
 		/** Key to look up. */
-		key: { [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }
+		key: { [T in P]: ShapeToType<I>[P] } & { [T in S]: ShapeToType<I>[S] }
 		/**
 		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error`
 		 * then `getItem` will throw that error instead of `ItemNotFoundError`. If it 
 		 * returns `undefined` then `getItem` will return `undefined` instead of throwing `ItemNotFoundError`.
 		 */
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => E
-	}): Promise<E extends Error ? ShapeObjectToType<I> : ShapeObjectToType<I> | undefined> {
+	}): Promise<E extends Error ? ShapeToType<I> : ShapeToType<I> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: params.table.tableName,
 			Key: params.key,
@@ -113,10 +115,10 @@ export class OptimusDdbClient {
 			if (error instanceof Error) {
 				throw error
 			} else {
-				return undefined as E extends Error ? ShapeObjectToType<I> : ShapeObjectToType<I> | undefined
+				return undefined as E extends Error ? ShapeToType<I> : ShapeToType<I> | undefined
 			}
 		} else {
-			return this.#recordAndStripItem(item, params.table, false) as ShapeObjectToType<I>
+			return this.#recordAndStripItem(item, params.table, false) as ShapeToType<I>
 		}
 	}
 
@@ -131,18 +133,19 @@ export class OptimusDdbClient {
 	 * @throws ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async getItems<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
+	async getItems<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>,
+			S extends keyof ShapeToType<I>>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
 		/** Keys to look up. */
-		keys: Array<{ [T in P]: ShapeToType<I[P]> } & { [T in S]: ShapeToType<I[S]> }>,
+		keys: Array<{ [T in P]: ShapeToType<I>[P] } & { [T in S]: ShapeToType<I>[S] }>,
 		/**
 		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw 
 		 * that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItems` will omit the item
 		 * from its response instead of throwing `ItemNotFoundError`.
 		 */
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
-	}): Promise<Array<ShapeObjectToType<I>>> {
+	}): Promise<Array<ShapeToType<I>>> {
 		if (params.keys.length === 0) return []
 		const unfinishedKeys: Array<Record<string,any>> = [...params.keys]
 		const finishedItems: Array<Record<string,any>> = []
@@ -192,7 +195,7 @@ export class OptimusDdbClient {
 	 * @returns A tuple:
 	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
 	 * * [1] Either a `resumeKey` if there's more to query after reaching the `limit`, or undefined. It's always
-	 * undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+	 * undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
 	 * attribute names and values from the DynamoDB table.
 	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
@@ -200,17 +203,18 @@ export class OptimusDdbClient {
 	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async queryItems<I extends ShapeObject, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
+	async queryItems<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
+			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to query. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		/** Condition to specify which partition the Query will take place in. */
-		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I[P]>>
+		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I>[P]>
 		/** Optional condition to specify how the partition will be queried. */
-		sortKeyCondition?: AnyToNever<ShapeToType<I[S]>> extends never ? never : SortKeyCondition<S, ShapeToType<I[S]>>,
+		sortKeyCondition?: AnyToNever<MergeUnion<ShapeToType<I>>[S]> extends never ? never : SortKeyCondition<S, MergeUnion<ShapeToType<I>>[S]>,
 		/** Optional list of conditions to filter down the results. */
 		filterConditions?: Array<{
-			[K in Exclude<Exclude<keyof I, P>, S>]: FilterCondition<K, ShapeToType<I[K]>>
-		}[Exclude<Exclude<keyof I, P>, S>]>,
+			[K in Exclude<Exclude<keyof MergeUnion<ShapeToType<I>>, P>, S>]: FilterCondition<K, MergeUnion<ShapeToType<I>>[K]>
+		}[Exclude<Exclude<keyof MergeUnion<ShapeToType<I>>, P>, S>]>,
 		/** Optional parameter used to switch the order of the query. */
 		scanIndexForward?: boolean,
 		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. */
@@ -219,7 +223,7 @@ export class OptimusDdbClient {
 		limit?: L,
 		/** Optional parameter to override `InvalidResumeKeyError`. */
 		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error
-	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<ShapeToType<I>>, L extends number ? string | undefined : undefined]> {
 		const [items, resumeKey] = await this.#handleQueryOrScan({
 			index: params.index,
 			commandInput: {
@@ -251,7 +255,7 @@ export class OptimusDdbClient {
 	 * @returns A tuple:
 	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
 	 * * [1] Either a `resumeKey` if there's more to scan after reaching the `limit`, or undefined. It's always
-	 * undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+	 * undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
 	 * attribute names and values from the DynamoDB table.
 	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
@@ -259,20 +263,21 @@ export class OptimusDdbClient {
 	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async scanItems<I extends ShapeObject, P extends keyof I, S extends keyof I, L extends number | undefined = undefined>(params: {
+	async scanItems<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
+			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to scan. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		/** Optional list of conditions to filter down the results. */
 		filterConditions?: Array<{
-			[K in keyof I]: FilterCondition<K, ShapeToType<I[K]>>
-		}[keyof I]>,
+			[K in keyof MergeUnion<ShapeToType<I>>]: FilterCondition<K, ShapeToType<I>[K]>
+		}[keyof MergeUnion<ShapeToType<I>>]>,
 		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `scanItems` call. */
 		resumeKey?: string,
 		/** Optional limit on the number of items to find before returning. */
 		limit?: L,
 		/** Optional parameter to override `InvalidResumeKeyError`. */
 		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error
-	}): Promise<[Array<ShapeObjectToType<I>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<ShapeToType<I>>, L extends number ? string | undefined : undefined]> {
 		const [items, resumeKey] = await this.#handleQueryOrScan({
 			index: params.index,
 			commandInput: {
@@ -419,8 +424,8 @@ export class OptimusDdbClient {
 	}
 	
 	/** @hidden */
-	#recordAndStripItem<I extends ShapeObject, P extends keyof I, S extends keyof I>
-			(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
+	#recordAndStripItem<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>, 
+			S extends keyof ShapeToType<I>>(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
 		if (!create && !Number.isInteger(item[table.versionAttribute]))
 			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
 		const version = create ? 0 : item[table.versionAttribute]
@@ -441,8 +446,8 @@ export class OptimusDdbClient {
 	}
 
 	/** @hidden */
-	#getUpdateDynamoDbExpression<I extends ShapeObject>
-			(item: ShapeObjectToType<I>, itemData: ItemData) {
+	#getUpdateDynamoDbExpression<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>>
+			(item: ShapeToType<I>, itemData: ItemData) {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
 		const set = itemData.table.attributes
 			.filter(key => item[key as string] !== undefined && !itemData.table.keyAttributes.includes(key as string))
@@ -462,14 +467,15 @@ export class OptimusDdbClient {
 	}
 
 	/** @hidden */
-	async #handleQueryOrScan<I extends ShapeObject, P extends keyof I, S extends keyof I>(params: {
+	async #handleQueryOrScan<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
+			S extends keyof MergeUnion<ShapeToType<I>>>(params: {
 		index: Table<I,P,S> | Gsi<I,P,S>
         commandInput: QueryCommandInput | ScanCommandInput,
         get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
 		limit: number | undefined,
         resumeKey: string | undefined,
 		invalidResumeKeyErrorOverride: ((e: InvalidResumeKeyError) => Error) | undefined
-	}): Promise<[Array<ShapeObjectToType<I>>, string | undefined]> {
+	}): Promise<[Array<ShapeToType<I>>, string | undefined]> {
 		const table = getIndexTable(params.index)
 		const itemsPagesIterator = new ItemsPagesIterator({
 			commandInput: params.commandInput,
@@ -477,7 +483,7 @@ export class OptimusDdbClient {
 			limit: params.limit,
 			lastEvaluatedKey: decodeResumeKey(params.resumeKey, getLastEvaluatedKeyShape(params.index), params.invalidResumeKeyErrorOverride)
 		})
-		const items: Array<ShapeObjectToType<I>> = []
+		const items: Array<ShapeToType<I>> = []
 		while (itemsPagesIterator.hasNext()) {
 			const page = await itemsPagesIterator.next()
 			const incompleteItems: Array<Record<string,any>> = []

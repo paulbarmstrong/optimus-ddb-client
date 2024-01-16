@@ -1,9 +1,13 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
-import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKeyCondition, ShapeObject, SortKeyCondition } from "./Types"
-import { Shape, ShapeToType, s, validateDataShape }  from "shape-tape"
+import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKeyCondition, SortKeyCondition, MergeUnion } from "./Types"
+import { ObjectShape, Shape, ShapeToType, UnionShape, s, validateDataShape }  from "shape-tape"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
+
+export function plurality(num: number) {
+	return num === 1 ? "" : "s"
+}
 
 export function getDynamoDbExpression(params: {
 	partitionKeyCondition?: PartitionKeyCondition<any,any>,
@@ -100,17 +104,17 @@ export function decodeResumeKey<T extends Shape>(resumeKey: string | undefined, 
 export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
 	const table = getIndexTable(index)
 	return s.object({
-		[table.partitionKey]: table.itemShape.propertyShapes[table.partitionKey],
+		[table.partitionKey]: getItemShapePropertyValueShape(table, table.partitionKey),
 		...(table.sortKey !== undefined ? (
-			{ [table.sortKey]: table.itemShape.propertyShapes[table.sortKey] }
+			{ [table.sortKey]: getItemShapePropertyValueShape(table, table.sortKey) }
 		) : (
 			{}
 		)),
 		...(index instanceof Gsi ? (
 			{
-				[index.partitionKey]: index.table.itemShape.propertyShapes[index.partitionKey],
+				[index.partitionKey]: getItemShapePropertyValueShape(table, index.partitionKey),
 				...(index.sortKey !== undefined ? (
-					{ [index.sortKey]: index.table.itemShape.propertyShapes[index.sortKey] }
+					{ [index.sortKey]: getItemShapePropertyValueShape(table, index.sortKey) }
 				) : (
 					{}
 				))
@@ -121,11 +125,18 @@ export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any
 	})
 }
 
-export function plurality(num: number) {
-	return num === 1 ? "" : "s"
+function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): Shape {
+	if (table.itemShape.propertyShapes !== undefined) {
+		return table.itemShape.propertyShapes[attributeName]
+	} else {
+		const specificMembers: Array<Shape> = (table.itemShape.memberShapes as Array<ObjectShape<any>>)
+			.filter(member => Object.keys(member.propertyShapes).includes(attributeName))
+			.map(member => member.propertyShapes[attributeName])
+		return s.union(specificMembers)
+	}
 }
 
-export function getIndexTable<I extends ShapeObject, P extends keyof I, S extends keyof I>
+export function getIndexTable<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never>
 		(index: Table<I,P,S> | Gsi<I,P,S>): Table<I,P,S> {
 	if (index instanceof Table) {
 		return index

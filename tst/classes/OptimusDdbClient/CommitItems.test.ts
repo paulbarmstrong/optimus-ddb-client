@@ -1,7 +1,7 @@
 import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb"
-import { Connection, Resource, connectionsTable, resourcesTable } from "../../test-utilities/Constants"
+import { Connection, Resource, connectionsTable, resourceEventsTable, resourcesTable } from "../../test-utilities/Constants"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { OptimisticLockError, Table } from "../../../src"
+import { ItemShapeValidationError, OptimisticLockError, Table } from "../../../src"
 import { ShapeToType, s } from "shape-tape"
 
 test("create, update, then delete", async () => {
@@ -428,5 +428,64 @@ describe("custom version attribute", () => {
 			ConsistentRead: true
 		}))
 		expect(getItemRes.Item).toStrictEqual({ id: "3001", name: "Banana", quantity: 5, "_version": 14 })
+	})
+})
+
+describe("table with UnionShape itemShape", () => {
+	test("regular creates", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([resourceEventsTable], [])
+		const event0 = optimus.draftItem({
+			table: resourceEventsTable,
+			item: { id: "aaaa", type: "title-change", title: "my document" }
+		})
+		const event1 = optimus.draftItem({
+			table: resourceEventsTable,
+			item: { id: "bbbb", type: "new-comment", comment: "hello" }
+		})
+		await optimus.commitItems({ items: [event0, event1] })
+	
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "ResourceEvents",
+			Key: { id: "aaaa" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "aaaa", type: "title-change", title: "my document", version: 0 })
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "ResourceEvents",
+			Key: { id: "bbbb" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "bbbb", type: "new-comment", comment: "hello", version: 0 })
+	})
+
+	test("regular update", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([resourceEventsTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "cccc", type: "title-change", title: "new document", version: 0 }
+		}))
+
+		const event = await optimus.getItem({
+			table: resourceEventsTable,
+			key: { id: "cccc" }
+		})
+		expect(event).toStrictEqual({ id: "cccc", type: "title-change", title: "new document" })
+		if (event.type === "title-change") {
+			event.title = "new document (1)"
+		}
+		await optimus.commitItems({ items: [event] })
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "ResourceEvents",
+			Key: { id: "cccc" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "cccc", type: "title-change", title: "new document (1)", version: 1 })
+	})
+
+	test("mixing union members", async () => {
+		const [optimus] = await prepDdbTest([resourceEventsTable], [])
+		const event = optimus.draftItem({
+			table: resourceEventsTable,
+			item: { id: "dddd", type: "new-comment", comment: "hello" }
+		})
+		;(event as any).title = "hello"
+		expect(optimus.commitItems({ items: [event] })).rejects.toThrow(ItemShapeValidationError)
 	})
 })

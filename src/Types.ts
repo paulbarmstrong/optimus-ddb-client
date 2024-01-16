@@ -1,12 +1,12 @@
-import { ObjectShape, Shape, ShapeToType, ShapeValidationError } from "shape-tape"
+import { ShapeValidationError } from "shape-tape"
 import { plurality } from "./Utilities"
 
-/** Type alias for a Shape's object parameter. */
-export type ShapeObject = { [key: string]: Shape }
-/** Utility Type for getting the TypeScript type that a ObjectShape's Shape represents. */
-export type ShapeObjectToType<S extends ShapeObject> = ShapeToType<ObjectShape<S>>
-
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
+
+type UnionKeys<T> = T extends T ? keyof T : never
+export type MergeUnion<T> = {
+	[K in UnionKeys<T>]: T extends Record<K, infer V> ? V : never
+}
 
 /** Type representing a condition that specifies a partition. */
 export type PartitionKeyCondition<L,R> = [L, "=", R]

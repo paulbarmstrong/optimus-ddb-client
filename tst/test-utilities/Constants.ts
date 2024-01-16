@@ -63,3 +63,22 @@ export const livestreamsTableViewerCountGsi = new Gsi({
 	partitionKey: "category",
 	sortKey: "viewerCount"
 })
+
+export const resourceEventShape = s.union([
+	s.object({
+		id: s.string(),
+		type: s.literal("title-change"),
+		title: s.string()
+	}),
+	s.object({
+		id: s.string(),
+		type: s.literal("new-comment"),
+		comment: s.string()
+	})
+])
+export type ResourceEvent = ShapeToType<typeof resourceEventShape>
+export const resourceEventsTable = new Table({
+	tableName: "ResourceEvents",
+	itemShape: resourceEventShape,
+	partitionKey: "id"
+})

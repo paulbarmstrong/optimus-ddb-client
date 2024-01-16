@@ -71,3 +71,30 @@ test("with shape including custom version attribute", () => {
 		})
 	}).toThrow(new Error(`Fruit table's item shape includes reserved version attribute "optimisticLockVersion".`))
 })
+
+test("table from UnionShape", () => {
+	const resourceEventShape = s.union([
+		s.object({
+			id: s.string(),
+			type: s.literal("title-change"),
+			title: s.string()
+		}),
+		s.object({
+			id: s.string(),
+			type: s.literal("new-comment"),
+			comment: s.string()
+		})
+	])
+	const resourceEventsTable = new Table({
+		tableName: "ResourceEvents",
+		itemShape: resourceEventShape,
+		partitionKey: "id"
+	})
+	expect(resourceEventsTable.attributes).toStrictEqual(["id", "type", "title", "comment"])
+	expect(resourceEventsTable.itemShape).toStrictEqual(resourceEventShape)
+	expect(resourceEventsTable.keyAttributes).toStrictEqual(["id"])
+	expect(resourceEventsTable.partitionKey).toStrictEqual("id")
+	expect(resourceEventsTable.sortKey).toBeUndefined()
+	expect(resourceEventsTable.tableName).toStrictEqual("ResourceEvents")
+	expect(resourceEventsTable.versionAttribute).toStrictEqual("version")
+})

@@ -9,9 +9,9 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
-| `P` | extends keyof `I` |
-| `S` | extends keyof `I` = `never` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `P` | extends keyof `MergeUnion`\<`ShapeToType`\<`I`\>\> |
+| `S` | extends keyof `MergeUnion`\<`ShapeToType`\<`I`\>\> = `never` |
 
 ## Table of contents
 
@@ -36,7 +36,7 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` = `never` |
 
@@ -56,7 +56,7 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 #### Defined in
 
-[src/classes/Gsi.ts:17](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L17)
+[src/classes/Gsi.ts:18](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L18)
 
 ## Properties
 
@@ -68,7 +68,7 @@ The IndexName of the GSI.
 
 #### Defined in
 
-[src/classes/Gsi.ts:12](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L12)
+[src/classes/Gsi.ts:13](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L13)
 
 ___
 
@@ -80,7 +80,7 @@ The name of the GSI's partition key.
 
 #### Defined in
 
-[src/classes/Gsi.ts:14](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L14)
+[src/classes/Gsi.ts:15](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L15)
 
 ___
 
@@ -92,7 +92,7 @@ The name of the GSI's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Gsi.ts:16](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L16)
+[src/classes/Gsi.ts:17](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L17)
 
 ___
 
@@ -104,4 +104,4 @@ The Table class instance representing the DynamoDB table of the GSI.
 
 #### Defined in
 
-[src/classes/Gsi.ts:10](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L10)
+[src/classes/Gsi.ts:11](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Gsi.ts#L11)

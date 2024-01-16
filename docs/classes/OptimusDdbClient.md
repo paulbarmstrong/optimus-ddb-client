@@ -83,13 +83,13 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:301](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L301)
+[src/classes/OptimusDdbClient.ts:306](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L306)
 
 ___
 
 ### draftItem
 
-▸ **draftItem**\<`I`, `P`, `S`\>(`params`): `ShapeObjectToType`\<`I`\>
+▸ **draftItem**\<`I`, `P`, `S`, `T`\>(`params`): `T`
 
 Drafts an item for creation. It does not call DynamoDB. The item is only
 created in DynamoDB once it is included in the `items` of a call to `commitItems`.
@@ -98,21 +98,22 @@ created in DynamoDB once it is included in the `items` of a call to `commitItems
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
+| `T` | extends {} \| {} |
 
 #### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.item` | `ShapeObjectToType`\<`I`\> | Object representing the item to be drafted. It should be an object not provided to OptimusDdbClient before. |
+| `params.item` | `T` | Object representing the item to be drafted. It should be an object not provided to OptimusDdbClient before. |
 | `params.table` | [`Table`](Table.md)\<`I`, `P`, `S`\> | Table where the item should go. |
 
 #### Returns
 
-`ShapeObjectToType`\<`I`\>
+`T`
 
 The drafted item.
 
@@ -128,7 +129,7 @@ ___
 
 ### getItem
 
-▸ **getItem**\<`I`, `P`, `S`, `E`\>(`params`): `Promise`\<`E` extends `Error` ? `ShapeObjectToType`\<`I`\> : `undefined` \| `ShapeObjectToType`\<`I`\>\>
+▸ **getItem**\<`I`, `P`, `S`, `E`\>(`params`): `Promise`\<`E` extends `Error` ? `ShapeToType`\<`I`\> : `undefined` \| `ShapeToType`\<`I`\>\>
 
 Gets an item from the given Table with the given key. It calls [the GetItem DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html).
@@ -137,7 +138,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html)
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `E` | extends `undefined` \| `Error` = `Error` |
@@ -148,12 +149,12 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html)
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.itemNotFoundErrorOverride?` | (`e`: [`ItemNotFoundError`](ItemNotFoundError.md)) => `E` | Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItem` will throw that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItem` will return `undefined` instead of throwing `ItemNotFoundError`. |
-| `params.key` | \{ [T in string \| number \| symbol]: ShapeToType\<I[P]\> } & \{ [T in string \| number \| symbol]: ShapeToType\<I[S]\> } | Key to look up. |
+| `params.key` | \{ [T in string \| number \| symbol]: ShapeToType\<I\>[P] } & \{ [T in string \| number \| symbol]: ShapeToType\<I\>[S] } | Key to look up. |
 | `params.table` | [`Table`](Table.md)\<`I`, `P`, `S`\> | Table to look in. |
 
 #### Returns
 
-`Promise`\<`E` extends `Error` ? `ShapeObjectToType`\<`I`\> : `undefined` \| `ShapeObjectToType`\<`I`\>\>
+`Promise`\<`E` extends `Error` ? `ShapeToType`\<`I`\> : `undefined` \| `ShapeToType`\<`I`\>\>
 
 The item with the given key (or `undefined` if the item is not found and 
 `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
@@ -168,7 +169,7 @@ ItemShapeValidationError if the item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:90](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L90)
+[src/classes/OptimusDdbClient.ts:91](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L91)
 
 ___
 
@@ -193,13 +194,13 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:411](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L411)
+[src/classes/OptimusDdbClient.ts:416](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L416)
 
 ___
 
 ### getItems
 
-▸ **getItems**\<`I`, `P`, `S`\>(`params`): `Promise`\<`ShapeObjectToType`\<`I`\>[]\>
+▸ **getItems**\<`I`, `P`, `S`\>(`params`): `Promise`\<`ShapeToType`\<`I`\>[]\>
 
 Gets items from the given Table with the given keys. It calls [the BatchGetItem DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html).
@@ -208,7 +209,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 
@@ -218,12 +219,12 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.itemNotFoundErrorOverride?` | (`e`: [`ItemNotFoundError`](ItemNotFoundError.md)) => `undefined` \| `Error` | Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItems` will omit the item from its response instead of throwing `ItemNotFoundError`. |
-| `params.keys` | \{ [T in string \| number \| symbol]: ShapeToType\<I[P]\> } & \{ [T in string \| number \| symbol]: ShapeToType\<I[S]\> }[] | Keys to look up. |
+| `params.keys` | \{ [T in string \| number \| symbol]: ShapeToType\<I\>[P] } & \{ [T in string \| number \| symbol]: ShapeToType\<I\>[S] }[] | Keys to look up. |
 | `params.table` | [`Table`](Table.md)\<`I`, `P`, `S`\> | Table to look in. |
 
 #### Returns
 
-`Promise`\<`ShapeObjectToType`\<`I`\>[]\>
+`Promise`\<`ShapeToType`\<`I`\>[]\>
 
 All of the items with the given keys (or just the items that were found if 
 `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
@@ -243,7 +244,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:134](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L134)
+[src/classes/OptimusDdbClient.ts:136](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L136)
 
 ___
 
@@ -267,13 +268,13 @@ deleted in DynamoDB once it is included in the `items` of a call to `commitItems
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:72](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L72)
+[src/classes/OptimusDdbClient.ts:73](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L73)
 
 ___
 
 ### queryItems
 
-▸ **queryItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeObjectToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+▸ **queryItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html). It may also call [
@@ -284,7 +285,7 @@ when it queries items from GSIs that don't project the attributes defined by the
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `L` | extends `undefined` \| `number` = `undefined` |
@@ -294,23 +295,23 @@ when it queries items from GSIs that don't project the attributes defined by the
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, ShapeToType\<I[K]\>\> }[`Exclude`\<`Exclude`\<keyof `I`, `P`\>, `S`\>][] | Optional list of conditions to filter down the results. |
+| `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, MergeUnion\<ShapeToType\<I\>\>[K]\> }[`Exclude`\<`Exclude`\<`UnionKeys`\<`ShapeToType`\<`I`\>\>, `P`\>, `S`\>][] | Optional list of conditions to filter down the results. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to query. |
 | `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
-| `params.partitionKeyCondition` | [`PartitionKeyCondition`](../index.md#partitionkeycondition)\<`P`, `ShapeToType`\<`I`[`P`]\>\> | Condition to specify which partition the Query will take place in. |
+| `params.partitionKeyCondition` | [`PartitionKeyCondition`](../index.md#partitionkeycondition)\<`P`, `ShapeToType`\<`I`\>[`P`]\> | Condition to specify which partition the Query will take place in. |
 | `params.resumeKey?` | `string` | Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. |
 | `params.scanIndexForward?` | `boolean` | Optional parameter used to switch the order of the query. |
-| `params.sortKeyCondition?` | `AnyToNever`\<`ShapeToType`\<`I`[`S`]\>\> extends `never` ? `never` : [`SortKeyCondition`](../index.md#sortkeycondition)\<`S`, `ShapeToType`\<`I`[`S`]\>\> | Optional condition to specify how the partition will be queried. |
+| `params.sortKeyCondition?` | `AnyToNever`\<`MergeUnion`\<`ShapeToType`\<`I`\>\>[`S`]\> extends `never` ? `never` : [`SortKeyCondition`](../index.md#sortkeycondition)\<`S`, `MergeUnion`\<`ShapeToType`\<`I`\>\>[`S`]\> | Optional condition to specify how the partition will be queried. |
 
 #### Returns
 
-`Promise`\<[`ShapeObjectToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+`Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 A tuple:
 * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
 * [1] Either a `resumeKey` if there's more to query after reaching the `limit`, or undefined. It's always
-undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
 attribute names and values from the DynamoDB table.
 
 **`Throws`**
@@ -329,13 +330,13 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:203](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L203)
+[src/classes/OptimusDdbClient.ts:206](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L206)
 
 ___
 
 ### scanItems
 
-▸ **scanItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeObjectToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+▸ **scanItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html). It may also call 
@@ -347,7 +348,7 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `L` | extends `undefined` \| `number` = `undefined` |
@@ -357,7 +358,7 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, ShapeToType\<I[K]\>\> }[keyof `I`][] | Optional list of conditions to filter down the results. |
+| `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, ShapeToType\<I\>[K]\> }[`UnionKeys`\<`ShapeToType`\<`I`\>\>][] | Optional list of conditions to filter down the results. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to scan. |
 | `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
@@ -365,12 +366,12 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 
 #### Returns
 
-`Promise`\<[`ShapeObjectToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+`Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 A tuple:
 * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
 * [1] Either a `resumeKey` if there's more to scan after reaching the `limit`, or undefined. It's always
-undefined if `limit` is not set. WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
 attribute names and values from the DynamoDB table.
 
 **`Throws`**
@@ -389,4 +390,4 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:262](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L262)
+[src/classes/OptimusDdbClient.ts:266](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L266)

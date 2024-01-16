@@ -8,7 +8,7 @@ when doing operations on items.
 #### Regarding `itemShape`
 
 The `itemShape` constructor parameter is a Shape representing the structure of items in the table. The Shape
-should be an ObjectShape including all attributes except for the version attribute which is abstracted from 
+should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version attribute which is abstracted from 
 OptimusDdbClient consumers.
 
 The mappings between DynamoDB types and Shapes are as follows:
@@ -37,9 +37,9 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
-| `P` | extends keyof `I` |
-| `S` | extends keyof `I` = `never` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `P` | extends keyof `ShapeToType`\<`I`\> |
+| `S` | extends keyof `ShapeToType`\<`I`\> = `never` |
 
 ## Table of contents
 
@@ -67,7 +67,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ShapeObject` |
+| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` = `never` |
 
@@ -76,7 +76,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.itemShape` | `ObjectShape`\<`I`\> | Shape representing the structure of items in the table. Please see the Table class documentation for details. |
+| `params.itemShape` | `I` | Shape representing the structure of items in the table. Please see the Table class documentation for details. |
 | `params.partitionKey` | `P` | The name of the DynamoDB table's partition key. |
 | `params.sortKey?` | `S` | The name of the DynamoDB table's sort key. It must be provided if and only if the table has a sort key. |
 | `params.tableName` | `string` | The TableName of the DynamoDB table. |
@@ -88,31 +88,31 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 #### Defined in
 
-[src/classes/Table.ts:55](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L55)
+[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L54)
 
 ## Properties
 
 ### attributes
 
-• `Readonly` **attributes**: keyof `I`[]
+• `Readonly` **attributes**: `string`[]
 
 The names of all of the item attributes (except for the version attribute).
 
 #### Defined in
 
-[src/classes/Table.ts:47](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L47)
+[src/classes/Table.ts:46](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L46)
 
 ___
 
 ### itemShape
 
-• `Readonly` **itemShape**: `ObjectShape`\<`I`\>
+• `Readonly` **itemShape**: `I`
 
 Shape representing the structure of items in the table. Please see the Table class documentation for details.
 
 #### Defined in
 
-[src/classes/Table.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L41)
+[src/classes/Table.ts:40](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L40)
 
 ___
 
@@ -125,7 +125,7 @@ if the table has a sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L52)
+[src/classes/Table.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L51)
 
 ___
 
@@ -137,7 +137,7 @@ The name of the DynamoDB table's partition key.
 
 #### Defined in
 
-[src/classes/Table.ts:43](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L43)
+[src/classes/Table.ts:42](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L42)
 
 ___
 
@@ -149,7 +149,7 @@ The name of the DynamoDB table's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:45](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L45)
+[src/classes/Table.ts:44](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L44)
 
 ___
 
@@ -161,7 +161,7 @@ The name of the DynamoDB table.
 
 #### Defined in
 
-[src/classes/Table.ts:39](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L39)
+[src/classes/Table.ts:38](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L38)
 
 ___
 
@@ -173,4 +173,4 @@ The name of the version attribute used for optimistic locking.
 
 #### Defined in
 
-[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L54)
+[src/classes/Table.ts:53](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L53)

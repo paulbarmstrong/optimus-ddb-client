@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourcesTable } from "../../test-utilities/Constants"
-import { InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
+import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourceEventsTable, resourcesTable } from "../../test-utilities/Constants"
+import { Gsi, InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
 
 describe("with normal tables", () => {
 	let optimus: OptimusDdbClient
@@ -238,12 +238,12 @@ describe("with normal tables", () => {
 		})
 
 		test("!= filter condition", async () => {
-			for (const neq of ["!=", "<>"]) {
+			for (const neq of ["!=", "<>"] as const) {
 				const [connections] = await optimus.queryItems({
 					index: connectionsTable,
 					partitionKeyCondition: ["id", "=", "4568"],
 					sortKeyCondition: ["resourceId", ">", "aaaa"],
-					filterConditions: [["updatedAt", neq as "!=" | "<>", 1702183489321]]
+					filterConditions: [["updatedAt", neq, 1702183489321]]
 				})
 				expect(connections).toStrictEqual([
 					{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
@@ -446,4 +446,54 @@ test("incomplete item in GSI", async () => {
 		{ id: "bbbb", category: "livestreams", viewerCount: 3, metadata: new Uint8Array(64) },
 		{ id: "aaaa", category: "livestreams", viewerCount: 2, metadata: new Uint8Array(64) }
 	])
+})
+
+describe("Table with UnionShape itemShape", () => {
+	const resourceEventsTableCommentGsi = new Gsi({
+		table: resourceEventsTable,
+		partitionKey: "type",
+		sortKey: "comment",
+		indexName: "comment"
+	})
+	let optimus: OptimusDdbClient
+	let ddbDocumentClient: DynamoDBDocumentClient
+	beforeAll(async () => {
+		const prepRes = await prepDdbTest([resourceEventsTable], [resourceEventsTableCommentGsi])
+		optimus = prepRes[0]
+		ddbDocumentClient = prepRes[1]
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "cccc", type: "new-comment", comment: "hi", version: 0 }
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "dddd", type: "new-comment", comment: "hello", version: 0 }
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "ResourceEvents",
+			Item: { id: "eeee", type: "title-change", title: "new document", version: 0 }
+		}))
+	})
+	test("normal case", async () => {
+		const [results] = await optimus.queryItems({
+			index: resourceEventsTable,
+			partitionKeyCondition: ["id", "=", "dddd"],
+		})
+		expect(results).toStrictEqual([
+			{ id: "dddd", type: "new-comment", comment: "hello" },
+		])
+	})
+	test("where GSI PK isn't in every union member", async () => {
+		const [results] = await optimus.queryItems({
+			index: resourceEventsTableCommentGsi,
+			partitionKeyCondition: ["type", "=", "new-comment"],
+			sortKeyCondition: ["comment", "begins with", "h"],
+			filterConditions: [["id", "between", "aaaa", "and", "fffff"]]
+		})
+	
+		expect(results).toStrictEqual([
+			{ id: "dddd", type: "new-comment", comment: "hello" },
+			{ id: "cccc", type: "new-comment", comment: "hi" }
+		])
+	})
 })
