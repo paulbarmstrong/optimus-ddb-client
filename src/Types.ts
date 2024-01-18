@@ -109,6 +109,7 @@ export class ItemShapeValidationError extends ShapeValidationError {
 
 /** @hidden */
 export class ItemWithoutVersionError extends Error {
+	name = "ItemWithoutVersionError"
 	constructor(message: string) {
 		super(message)
 	}

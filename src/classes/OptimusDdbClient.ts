@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteComma
 import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-tape"
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
-import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape } from "../Utilities"
+import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape, isGsi } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -195,8 +195,8 @@ export class OptimusDdbClient {
 	 * @returns A tuple:
 	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
 	 * * [1] Either a `resumeKey` if there's more to query after reaching the `limit`, or undefined. It's always
-	 * undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
-	 * attribute names and values from the DynamoDB table.
+	 * undefined if `limit` is not set. **WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+	 * attribute names and values from the DynamoDB table.**
 	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
@@ -228,8 +228,8 @@ export class OptimusDdbClient {
 			index: params.index,
 			commandInput: {
 				TableName: getIndexTable(params.index).tableName,
-				IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
-				ConsistentRead: params.index instanceof Table,
+				IndexName: isGsi(params.index) ? (params.index as Gsi<I,P,S>).indexName : undefined,
+				ConsistentRead: !isGsi(params.index),
 				...getDynamoDbExpression({
 					partitionKeyCondition: params.partitionKeyCondition,
 					sortKeyCondition: params.sortKeyCondition,
@@ -255,8 +255,8 @@ export class OptimusDdbClient {
 	 * @returns A tuple:
 	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
 	 * * [1] Either a `resumeKey` if there's more to scan after reaching the `limit`, or undefined. It's always
-	 * undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
-	 * attribute names and values from the DynamoDB table.
+	 * undefined if `limit` is not set. **WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+	 * attribute names and values from the DynamoDB table.**
 	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
@@ -282,8 +282,8 @@ export class OptimusDdbClient {
 			index: params.index,
 			commandInput: {
 				TableName: getIndexTable(params.index).tableName,
-				IndexName: params.index instanceof Gsi ? params.index.indexName : undefined,
-				ConsistentRead: params.index instanceof Table,
+				IndexName: isGsi(params.index) ? (params.index as Gsi<I,P,S>).indexName : undefined,
+				ConsistentRead: !isGsi(params.index),
 				...getDynamoDbExpression({
 					filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
 				})
@@ -414,7 +414,7 @@ export class OptimusDdbClient {
 	 * @returns The item's optimistic locking version number.
 	 */
 	getItemVersion(params: {
-		/** An item produced by DynamoDbClient */
+		/** An item produced by OptimusDdbClient */
 		item: Record<string, any>
 	}): number {
 		const itemData = this.#recordedItems.get(params.item)
@@ -491,8 +491,8 @@ export class OptimusDdbClient {
 				try {
 					items.push(this.#recordAndStripItem(item, table, false))
 				} catch (error) {
-					if (params.index instanceof Gsi && 
-						(error instanceof ItemWithoutVersionError || (error instanceof ItemShapeValidationError && error.data === undefined))) {
+					if (isGsi(params.index) && 
+						((error as any).name === "ItemWithoutVersionError" || ((error as any).name === "ItemShapeValidationError" && (error as ItemShapeValidationError).data === undefined))) {
 						incompleteItems.push(item)
 					} else {
 						throw error

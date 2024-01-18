@@ -110,7 +110,7 @@ export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any
 		) : (
 			{}
 		)),
-		...(index instanceof Gsi ? (
+		...(isGsi(index) ? (
 			{
 				[index.partitionKey]: getItemShapePropertyValueShape(table, index.partitionKey),
 				...(index.sortKey !== undefined ? (
@@ -138,9 +138,13 @@ function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName
 
 export function getIndexTable<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never>
 		(index: Table<I,P,S> | Gsi<I,P,S>): Table<I,P,S> {
-	if (index instanceof Table) {
-		return index
+	if (isGsi(index)) {
+		return (index as Gsi<I,P,S>).table
 	} else {
-		return index.table
+		return index as Table<I,P,S>
 	}
+}
+
+export function isGsi(index: Table<any,any,any> | Gsi<any,any,any>): boolean {
+	return (index as Gsi<any,any,any>).indexName !== undefined
 }

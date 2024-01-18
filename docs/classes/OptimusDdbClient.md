@@ -184,7 +184,7 @@ Gets an item's optimistic locking version number.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.item` | `Record`\<`string`, `any`\> | An item produced by DynamoDbClient |
+| `params.item` | `Record`\<`string`, `any`\> | An item produced by OptimusDdbClient |
 
 #### Returns
 
@@ -311,8 +311,8 @@ when it queries items from GSIs that don't project the attributes defined by the
 A tuple:
 * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
 * [1] Either a `resumeKey` if there's more to query after reaching the `limit`, or undefined. It's always
-undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
-attribute names and values from the DynamoDB table.
+undefined if `limit` is not set. **WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+attribute names and values from the DynamoDB table.**
 
 **`Throws`**
 
@@ -371,8 +371,8 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 A tuple:
 * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
 * [1] Either a `resumeKey` if there's more to scan after reaching the `limit`, or undefined. It's always
-undefined if `limit` is not set. *WARNING*: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
-attribute names and values from the DynamoDB table.
+undefined if `limit` is not set. **WARNING: The `resumeKey` is the LastEvaluatedKey returned by DynamoDB. It contains key 
+attribute names and values from the DynamoDB table.**
 
 **`Throws`**
 

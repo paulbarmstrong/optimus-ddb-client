@@ -54,7 +54,7 @@ export class Table<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any
 	constructor(params: {
 		/** The TableName of the DynamoDB table. */
 		tableName: string,
-		/** Shape representing the structure of items in the table. Please see the Table class documentation for details. */
+		/** Shape representing the structure of items in the table. Please see the top-level Table class documentation for details. */
 		itemShape: I,
 		/** The name of the DynamoDB table's partition key. */
 		partitionKey: P,

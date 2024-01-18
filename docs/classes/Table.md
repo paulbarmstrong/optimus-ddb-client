@@ -76,7 +76,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.itemShape` | `I` | Shape representing the structure of items in the table. Please see the Table class documentation for details. |
+| `params.itemShape` | `I` | Shape representing the structure of items in the table. Please see the top-level Table class documentation for details. |
 | `params.partitionKey` | `P` | The name of the DynamoDB table's partition key. |
 | `params.sortKey?` | `S` | The name of the DynamoDB table's sort key. It must be provided if and only if the table has a sort key. |
 | `params.tableName` | `string` | The TableName of the DynamoDB table. |
