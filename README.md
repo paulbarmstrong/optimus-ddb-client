@@ -1,14 +1,13 @@
 ## optimus-ddb-client
 
-### Notice
-Please note this package is still experimental so breaking changes may be made without notice.
-
 ### About
-OptimusDdbClient is a high level TypeScript/JavaScript DynamoDB client focused on strong typing and transactional consistency.
 
-Consumers specify the indexes of their tables and the shapes of items in their tables. OptimusDdbClient uses those specifications to provide the strongest possible typing for operations on those tables. All items, key parameters, and query expressions are fully typed for each table's specific indexes and items.
-
-An abstracted version number attribute facilitates optimistic locking. When consumers commit their changes OptimusDdbClient does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in the consumer's code, or the transaction will be cancelled and OptimusDdbClient throws an error.
+OptimusDdbClient is a TypeScript/JavaScript DynamoDB client with the following abstractions:
+ * **JavaScript attribute types instead of DynamoDB JSON.** Your items' attributes are represented by JavaScript types like `number` and `string` instead of DynamoDB JSON.
+ * **Strong typing.** All items, key parameters, and query conditions are statically typed for each table's specific indexes and items. Runtime type validation is performed when pulling items out of DynamoDB and committing items into DynamoDB.
+ * **Built-in transactions and optimistic locking.** An abstracted version number attribute facilitates optimistic locking. When you commit changes OptimusDdbClient does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in your code, or the transaction is cancelled and OptimusDdbClient throws an error.
+ * **Managed expressions.** Instead of a string, expression name mappings, and expression value mappings, OptimusDdbClient's Query and Scan conditions are specified with statically typed tuples. Because of that you can be confident that your conditions are valid and you don't have to worry about mapping expression names and expression values.
+ * **No size limits for BatchGetItem, Query, or Scan.** OptimusDdbClient's getItems method will call BatchGetItem until all requested items. OptimusDdbClient's queryItems and scanItems methods will call Query or Scan respectively until the optional limit you specify is reached or it hits the end of the index.
 
 ### Requirements
 

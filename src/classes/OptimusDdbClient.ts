@@ -124,7 +124,8 @@ export class OptimusDdbClient {
 
 	/**
 	 * Gets items from the given Table with the given keys. It calls [the BatchGetItem DynamoDB API](
-	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html).
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) as many times as
+	 * necessary to get all the requested items.
 	 * 
 	 * @returns All of the items with the given keys (or just the items that were found if 
 	 * `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
@@ -188,9 +189,10 @@ export class OptimusDdbClient {
 	
 	/**
 	 * Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
-	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html). It may also call [
-	 * the BatchGetItem DynamoDB API](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html)
-	 * when it queries items from GSIs that don't project the attributes defined by the Table's itemShape.
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html) as many times as necessary to hit the 
+	 * specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it queries items from GSIs 
+	 * that don't project the attributes defined by the Table's itemShape.
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
@@ -245,10 +247,10 @@ export class OptimusDdbClient {
 	
 	/**
 	 * Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
-	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html). It may also call 
-	 * [the BatchGetItem DynamoDB API](
-	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans
-	 * items from GSIs that don't project the attributes defined by the Table's itemShape.
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html) as many times as necessary to hit the 
+	 * specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
+	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans items from GSIs
+	 * that don't project the attributes defined by the Table's itemShape.
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).

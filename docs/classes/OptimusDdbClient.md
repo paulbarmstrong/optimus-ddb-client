@@ -83,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:302](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L302)
+[src/classes/OptimusDdbClient.ts:304](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L304)
 
 ___
 
@@ -194,7 +194,7 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:412](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L412)
+[src/classes/OptimusDdbClient.ts:414](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L414)
 
 ___
 
@@ -203,7 +203,8 @@ ___
 ▸ **getItems**\<`I`, `P`, `S`\>(`params`): `Promise`\<`ShapeToType`\<`I`\>[]\>
 
 Gets items from the given Table with the given keys. It calls [the BatchGetItem DynamoDB API](
-https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html).
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) as many times as
+necessary to get all the requested items.
 
 #### Type parameters
 
@@ -244,7 +245,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:136](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L136)
+[src/classes/OptimusDdbClient.ts:137](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L137)
 
 ___
 
@@ -277,9 +278,10 @@ ___
 ▸ **queryItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
-https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html). It may also call [
-the BatchGetItem DynamoDB API](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html)
-when it queries items from GSIs that don't project the attributes defined by the Table's itemShape.
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html) as many times as necessary to hit the 
+specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it queries items from GSIs 
+that don't project the attributes defined by the Table's itemShape.
 
 #### Type parameters
 
@@ -330,7 +332,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:206](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L206)
+[src/classes/OptimusDdbClient.ts:208](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L208)
 
 ___
 
@@ -339,10 +341,10 @@ ___
 ▸ **scanItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
-https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html). It may also call 
-[the BatchGetItem DynamoDB API](
-https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans
-items from GSIs that don't project the attributes defined by the Table's itemShape.
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html) as many times as necessary to hit the 
+specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
+https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans items from GSIs
+that don't project the attributes defined by the Table's itemShape.
 
 #### Type parameters
 
@@ -390,4 +392,4 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:264](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L264)
+[src/classes/OptimusDdbClient.ts:266](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L266)

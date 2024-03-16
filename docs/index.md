@@ -29,11 +29,13 @@ This is low level documentation. Please see [README.md](../README.md) for the hi
 
 Ƭ **FilterCondition**\<`I`\>: \{ [K in keyof I]: FilterConditionLeaf\<K, I[K]\> }[keyof `I`] \| [[`FilterCondition`](index.md#filtercondition)\<`I`\>, ``"or"``, [`FilterCondition`](index.md#filtercondition)\<`I`\>] \| [[`FilterCondition`](index.md#filtercondition)\<`I`\>, ``"and"``, [`FilterCondition`](index.md#filtercondition)\<`I`\>] \| [[`FilterCondition`](index.md#filtercondition)\<`I`\>]
 
+Type representing a condition for filtering items during a query or scan.
+
 #### Type parameters
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `Record`\<`string`, `Shape`\> |
+| `I` | extends `Record`\<`string`, `any`\> |
 
 #### Defined in
 
