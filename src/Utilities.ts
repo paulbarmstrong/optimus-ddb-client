@@ -12,7 +12,7 @@ export function plurality(num: number) {
 export function getDynamoDbExpression(params: {
 	partitionKeyCondition?: PartitionKeyCondition<any,any>,
 	sortKeyCondition?: SortKeyCondition<any,any>,
-	filterConditions?: Array<FilterCondition<any,any>>,
+	filterCondition?: FilterCondition<any>,
 	conditionConditions?: Array<ConditionCondition<any,any>>
 }) {
 	const builder: ExpressionBuilder = new ExpressionBuilder()
@@ -23,10 +23,7 @@ export function getDynamoDbExpression(params: {
 	const keyConditionExpression = keyConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
 		.join(" AND ")
-	const filterConditions = params.filterConditions !== undefined ? params.filterConditions : []
-	const filterConditionExpression = filterConditions
-		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
-		.join(" AND ")
+	const filterConditionExpression = params.filterCondition !== undefined ? getDynamoDbConditionExpressionString(params.filterCondition, builder) : undefined
 	const conditionConditions = params.conditionConditions !== undefined ? params.conditionConditions : []
 	const conditionConditionExpression = conditionConditions
 		.map(condition => getDynamoDbConditionExpressionString(condition, builder))
@@ -35,7 +32,7 @@ export function getDynamoDbExpression(params: {
 	const attributeValues = builder.attributeValues
 	return {
 		KeyConditionExpression: keyConditions.length > 0 ? keyConditionExpression : undefined,
-		FilterExpression: filterConditions.length > 0 ? filterConditionExpression : undefined,
+		FilterExpression: filterConditionExpression,
 		ConditionExpression: conditionConditions.length > 0 ? conditionConditionExpression : undefined,
 		ExpressionAttributeNames: Object.entries(attributeNames).length > 0 ? attributeNames : undefined,
 		ExpressionAttributeValues: Object.entries(attributeValues).length > 0 ? attributeValues : undefined,
@@ -43,9 +40,11 @@ export function getDynamoDbExpression(params: {
 }
 
 export function getDynamoDbConditionExpressionString<L,R>
-		(condition: PartitionKeyCondition<any,any> | SortKeyCondition<any,any> | FilterCondition<any,any>,
+		(condition: PartitionKeyCondition<any,any> | SortKeyCondition<any,any> | FilterCondition<any>,
 		builder: ExpressionBuilder): string {
-	if (condition[1] === "exists" || condition[1] === "doesn't exist") {
+	if (condition.length === 1) {
+		return `(${getDynamoDbConditionExpressionString(condition[0], builder)})`
+	} else if (condition[1] === "exists" || condition[1] === "doesn't exist") {
 		const functionName = {
 			"exists": "attribute_exists",
 			"doesn't exist": "attribute_not_exists"
@@ -60,11 +59,19 @@ export function getDynamoDbConditionExpressionString<L,R>
 	} else if (condition[1] === "begins with" || condition[1] === "contains") {
 		return `${OPTIMUS_OPERATORS[condition[1]]}(${builder.addName(condition[0])}, ${builder.addValue(condition[2])})`
 	} else if (condition.length === 3) {
-		return [
-			builder.addName(condition[0]),
-			OPTIMUS_OPERATORS[condition[1]],
-			builder.addValue(condition[2])
-		].join(" ")
+		if (Array.isArray(condition[0]) && (condition[1] === "or" || condition[1] === "and") && Array.isArray(condition[2])) {
+			return [
+				getDynamoDbConditionExpressionString(condition[0], builder),
+				OPTIMUS_OPERATORS[condition[1]],
+				getDynamoDbConditionExpressionString(condition[2], builder)
+			].join(" ")
+		} else {
+			return [
+				builder.addName(condition[0]),
+				OPTIMUS_OPERATORS[condition[1]],
+				builder.addValue(condition[2])
+			].join(" ")
+		}
 	} else if (condition.length === 5) {
 		return [
 			builder.addName(condition[0]),

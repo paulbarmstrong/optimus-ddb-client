@@ -51,7 +51,7 @@ describe("with normal tables", () => {
 	test("=", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["status", "=", "available"]]
+			filterCondition: ["status", "=", "available"]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
@@ -63,7 +63,7 @@ describe("with normal tables", () => {
 		for (const neq of ["!=", "<>"] as const) {
 			const [resources] = await optimus.scanItems({
 				index: resourcesTable,
-				filterConditions: [["status", neq, "available"]]
+				filterCondition: ["status", neq, "available"]
 			})
 			expect(resources).toStrictEqual([
 				{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
@@ -74,7 +74,7 @@ describe("with normal tables", () => {
 	test("<", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["updatedAt", "<", 1702185592222]]
+			filterCondition: ["updatedAt", "<", 1702185592222]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
@@ -85,7 +85,7 @@ describe("with normal tables", () => {
 	test(">", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["updatedAt", ">", 1702185591111]]
+			filterCondition: ["updatedAt", ">", 1702185591111]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
@@ -95,7 +95,7 @@ describe("with normal tables", () => {
 	test("<=", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["updatedAt", "<=", 1702185591111]]
+			filterCondition: ["updatedAt", "<=", 1702185591111]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
@@ -106,7 +106,7 @@ describe("with normal tables", () => {
 	test(">=", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["updatedAt", ">=", 1702185591111]]
+			filterCondition: ["updatedAt", ">=", 1702185591111]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "bbbb", status: "available", updatedAt: 1702185591111 },
@@ -117,7 +117,7 @@ describe("with normal tables", () => {
 	test("begins with", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["status", "begins with", "a"]]
+			filterCondition: ["status", "begins with", "a"]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
@@ -128,7 +128,7 @@ describe("with normal tables", () => {
 	test("contains", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["status", "contains", "lete"]]
+			filterCondition: ["status", "contains", "lete"]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
@@ -138,7 +138,7 @@ describe("with normal tables", () => {
 	test("in", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["updatedAt", "in", [1702185592222, 1702185590000]]]
+			filterCondition: ["updatedAt", "in", [1702185592222, 1702185590000]]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 },
@@ -149,20 +149,28 @@ describe("with normal tables", () => {
 	test("= and >", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [
-				["status", "=", "available"],
-				["updatedAt", ">", 1702185590000]
-			]
+			filterCondition: [["status", "=", "available"], "and", ["updatedAt", ">", 1702185590000]]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "bbbb", status: "available", updatedAt: 1702185591111 }
 		])
 	})
 
+	test("= or =", async () => {
+		const [resources] = await optimus.scanItems({
+			index: resourcesTable,
+			filterCondition: [["status", "=", "deleted"], "or", ["id", "=", "bbbb"]]
+		})
+		expect(resources).toStrictEqual([
+			{ id: "bbbb", status: "available", updatedAt: 1702185591111 },
+			{ id: "cccc", status: "deleted", updatedAt: 1702185592222 }
+		])
+	})
+
 	test("using primary key attribute", async () => {
 		const [resources] = await optimus.scanItems({
 			index: resourcesTable,
-			filterConditions: [["id", "=", "aaaa"]]
+			filterCondition: ["id", "=", "aaaa"]
 		})
 		expect(resources).toStrictEqual([
 			{ id: "aaaa", status: "available", updatedAt: 1702185590000 }
@@ -172,7 +180,7 @@ describe("with normal tables", () => {
 	test("using sort key attribute", async () => {
 		const [connections] = await optimus.scanItems({
 			index: connectionsTable,
-			filterConditions: [["resourceId", "=", "dddd"]]
+			filterCondition: ["resourceId", "=", "dddd"]
 		})
 		expect(connections).toStrictEqual([
 			{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 },
@@ -228,7 +236,7 @@ describe("with normal tables", () => {
 		test("=", async () => {
 			const [connections, resumeKey] = await optimus.scanItems({
 				index: connectionsTableResourceIdGsi,
-				filterConditions: [["updatedAt", "=", 1702186485444]]
+				filterCondition: ["updatedAt", "=", 1702186485444]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "dddd", updatedAt: 1702186485444 }
@@ -310,14 +318,14 @@ describe("Table with UnionShape itemShape", () => {
 	test("2 pages", async () => {
 		const [results0, resumeKey0] = await optimus.scanItems({
 			index: resourceEventsTable,
-			filterConditions: [["type", "=", "new-comment"]],
+			filterCondition: ["type", "=", "new-comment"],
 			limit: 1
 		})
 		expect(results0).toStrictEqual([{ id: "dddd", type: "new-comment", comment: "hello" }])
 		expect(typeof resumeKey0).toStrictEqual("string")
 		const [results1, resumeKey1] = await optimus.scanItems({
 			index: resourceEventsTable,
-			filterConditions: [["type", "=", "new-comment"]],
+			filterCondition: ["type", "=", "new-comment"],
 			resumeKey: resumeKey0,
 			limit: 1
 		})
@@ -327,7 +335,7 @@ describe("Table with UnionShape itemShape", () => {
 	test("where GSI PK isn't in every union member", async () => {
 		const [results] = await optimus.scanItems({
 			index: resourceEventsTableCommentGsi,
-			filterConditions: [["id", "!=", "cccc"]]
+			filterCondition: ["id", "!=", "cccc"]
 		})
 		expect(results).toStrictEqual([
 			{ id: "dddd", type: "new-comment", comment: "hello" }

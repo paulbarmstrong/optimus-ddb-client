@@ -211,10 +211,8 @@ export class OptimusDdbClient {
 		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I>[P]>
 		/** Optional condition to specify how the partition will be queried. */
 		sortKeyCondition?: AnyToNever<MergeUnion<ShapeToType<I>>[S]> extends never ? never : SortKeyCondition<S, MergeUnion<ShapeToType<I>>[S]>,
-		/** Optional list of conditions to filter down the results. */
-		filterConditions?: Array<{
-			[K in Exclude<Exclude<keyof MergeUnion<ShapeToType<I>>, P>, S>]: FilterCondition<K, MergeUnion<ShapeToType<I>>[K]>
-		}[Exclude<Exclude<keyof MergeUnion<ShapeToType<I>>, P>, S>]>,
+		/** Optional condition to filter items during the query. */
+		filterCondition?: FilterCondition<Omit<Omit<MergeUnion<ShapeToType<I>>, P>, S>>,
 		/** Optional parameter used to switch the order of the query. */
 		scanIndexForward?: boolean,
 		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. */
@@ -233,7 +231,7 @@ export class OptimusDdbClient {
 				...getDynamoDbExpression({
 					partitionKeyCondition: params.partitionKeyCondition,
 					sortKeyCondition: params.sortKeyCondition,
-					filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
+					filterCondition: params.filterCondition as FilterCondition<any> | undefined
 				}),
 				ScanIndexForward: params.scanIndexForward
 			},
@@ -267,10 +265,8 @@ export class OptimusDdbClient {
 			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to scan. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
-		/** Optional list of conditions to filter down the results. */
-		filterConditions?: Array<{
-			[K in keyof MergeUnion<ShapeToType<I>>]: FilterCondition<K, ShapeToType<I>[K]>
-		}[keyof MergeUnion<ShapeToType<I>>]>,
+		/** Optional condition to filter items during the scan. */
+		filterCondition?: FilterCondition<MergeUnion<ShapeToType<I>>>,
 		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `scanItems` call. */
 		resumeKey?: string,
 		/** Optional limit on the number of items to find before returning. */
@@ -285,7 +281,7 @@ export class OptimusDdbClient {
 				IndexName: isGsi(params.index) ? (params.index as Gsi<I,P,S>).indexName : undefined,
 				ConsistentRead: !isGsi(params.index),
 				...getDynamoDbExpression({
-					filterConditions: params.filterConditions !== undefined ? params.filterConditions : []
+					filterCondition: params.filterCondition as FilterCondition<any> | undefined
 				})
 			},
 			get: input => this.#ddbDocumentClient.send(new ScanCommand(input)),

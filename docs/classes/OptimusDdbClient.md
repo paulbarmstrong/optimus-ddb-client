@@ -83,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:306](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L306)
+[src/classes/OptimusDdbClient.ts:302](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L302)
 
 ___
 
@@ -194,7 +194,7 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:416](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L416)
+[src/classes/OptimusDdbClient.ts:412](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L412)
 
 ___
 
@@ -295,7 +295,7 @@ when it queries items from GSIs that don't project the attributes defined by the
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, MergeUnion\<ShapeToType\<I\>\>[K]\> }[`Exclude`\<`Exclude`\<`UnionKeys`\<`ShapeToType`\<`I`\>\>, `P`\>, `S`\>][] | Optional list of conditions to filter down the results. |
+| `params.filterCondition?` | [`FilterCondition`](../index.md#filtercondition)\<`Omit`\<`Omit`\<`MergeUnion`\<`ShapeToType`\<`I`\>\>, `P`\>, `S`\>\> | Optional condition to filter items during the query. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to query. |
 | `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
@@ -358,7 +358,7 @@ items from GSIs that don't project the attributes defined by the Table's itemSha
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.filterConditions?` | \{ [K in string \| number \| symbol]: FilterCondition\<K, ShapeToType\<I\>[K]\> }[`UnionKeys`\<`ShapeToType`\<`I`\>\>][] | Optional list of conditions to filter down the results. |
+| `params.filterCondition?` | [`FilterCondition`](../index.md#filtercondition)\<`MergeUnion`\<`ShapeToType`\<`I`\>\>\> | Optional condition to filter items during the scan. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to scan. |
 | `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
@@ -390,4 +390,4 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:266](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L266)
+[src/classes/OptimusDdbClient.ts:264](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L264)

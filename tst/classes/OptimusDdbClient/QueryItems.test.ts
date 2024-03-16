@@ -58,7 +58,7 @@ describe("with normal tables", () => {
 			const [resources] = await optimus.queryItems({
 				index: resourcesTable,
 				partitionKeyCondition: ["id", "=", "aaaa"],
-				filterConditions: [["status", "=", "deleted"]]
+				filterCondition: ["status", "=", "deleted"]
 			})
 			expect(resources).toStrictEqual([])
 		})
@@ -67,7 +67,7 @@ describe("with normal tables", () => {
 			const [resources, resumeKey] = await optimus.queryItems({
 				index: resourcesTable,
 				partitionKeyCondition: ["id", "=", "aaaa"],
-				filterConditions: [["status", "<>", "deleted"]]
+				filterCondition: ["status", "<>", "deleted"]
 			})
 			expect(resources).toStrictEqual([{ id: "aaaa", status: "available", updatedAt: 1702185430122 }])
 			expect(resumeKey).toStrictEqual(undefined)
@@ -230,7 +230,7 @@ describe("with normal tables", () => {
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				sortKeyCondition: ["resourceId", ">", "aaaa"],
-				filterConditions: [["updatedAt", "=", 1702183489321]]
+				filterCondition: ["updatedAt", "=", 1702183489321]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 }
@@ -243,7 +243,7 @@ describe("with normal tables", () => {
 					index: connectionsTable,
 					partitionKeyCondition: ["id", "=", "4568"],
 					sortKeyCondition: ["resourceId", ">", "aaaa"],
-					filterConditions: [["updatedAt", neq, 1702183489321]]
+					filterCondition: ["updatedAt", neq, 1702183489321]
 				})
 				expect(connections).toStrictEqual([
 					{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
@@ -256,7 +256,7 @@ describe("with normal tables", () => {
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				sortKeyCondition: ["resourceId", ">", "aaaa"],
-				filterConditions: [["updatedAt", "<", 1702183489321]]
+				filterCondition: ["updatedAt", "<", 1702183489321]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
@@ -268,7 +268,7 @@ describe("with normal tables", () => {
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				sortKeyCondition: ["resourceId", ">", "aaaa"],
-				filterConditions: [["updatedAt", ">", 1702183485312]]
+				filterCondition: ["updatedAt", ">", 1702183485312]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 }
@@ -280,7 +280,7 @@ describe("with normal tables", () => {
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				sortKeyCondition: ["resourceId", ">", "aaaa"],
-				filterConditions: [["updatedAt", "<=", 1702183489321]]
+				filterCondition: ["updatedAt", "<=", 1702183489321]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 },
@@ -293,7 +293,7 @@ describe("with normal tables", () => {
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
 				sortKeyCondition: ["resourceId", "<", "cccc"],
-				filterConditions: [["updatedAt", ">=", 1702183489321]]
+				filterCondition: ["updatedAt", ">=", 1702183489321]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "aaaa", updatedAt: 1702186485444 },
@@ -305,7 +305,7 @@ describe("with normal tables", () => {
 			const [connections] = await optimus.queryItems({
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
-				filterConditions: [["updatedAt", "between", 1702183489321, "and", 1702183489321]]
+				filterCondition: ["updatedAt", "between", 1702183489321, "and", 1702183489321]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 }
@@ -316,7 +316,7 @@ describe("with normal tables", () => {
 			const [connections] = await optimus.queryItems({
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
-				filterConditions: [["ttl", "exists"]]
+				filterCondition: ["ttl", "exists"]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "cccc", updatedAt: 1702183485312, ttl: 1702185485312 }
@@ -327,7 +327,7 @@ describe("with normal tables", () => {
 			const [connections] = await optimus.queryItems({
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
-				filterConditions: [["ttl", "doesn't exist"]]
+				filterCondition: ["ttl", "doesn't exist"]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "aaaa", updatedAt: 1702186485444 },
@@ -339,7 +339,7 @@ describe("with normal tables", () => {
 			const [connections] = await optimus.queryItems({
 				index: connectionsTable,
 				partitionKeyCondition: ["id", "=", "4568"],
-				filterConditions: [["updatedAt", "in", [1702183489321, 1702183485312]]]
+				filterCondition: ["updatedAt", "in", [1702183489321, 1702183485312]]
 			})
 			expect(connections).toStrictEqual([
 				{ id: "4568", resourceId: "bbbb", updatedAt: 1702183489321 },
@@ -488,7 +488,7 @@ describe("Table with UnionShape itemShape", () => {
 			index: resourceEventsTableCommentGsi,
 			partitionKeyCondition: ["type", "=", "new-comment"],
 			sortKeyCondition: ["comment", "begins with", "h"],
-			filterConditions: [["id", "between", "aaaa", "and", "fffff"]]
+			filterCondition: ["id", "between", "aaaa", "and", "fffff"]
 		})
 	
 		expect(results).toStrictEqual([

@@ -1,4 +1,4 @@
-import { ShapeValidationError } from "shape-tape"
+import { ObjectShape, Shape, ShapeValidationError, UnionShape } from "shape-tape"
 import { plurality } from "./Utilities"
 
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
@@ -23,7 +23,7 @@ export type SortKeyCondition<L, R> = R extends string ? (
 )
 
 /** Type representing a condition for filtering query or scan results. */
-export type FilterCondition<L, R> = [L, "exists" | "doesn't exist"] | (R extends string ? (
+export type FilterConditionLeaf<L, R> = [L, "exists" | "doesn't exist"] | (R extends string ? (
 	[L, "=", R] |
 	[L, "<>" | "!=" | "<" | ">" | "<=" | ">=" | "begins with" | "contains", string] |
 	[L, "between", string, "and", string] |
@@ -37,6 +37,8 @@ export type FilterCondition<L, R> = [L, "exists" | "doesn't exist"] | (R extends
 ) : (
 	[L, "=", R]
 ))
+
+export type FilterCondition<I extends Record<string, Shape>> = {[K in keyof I]: FilterConditionLeaf<K, I[K]>}[keyof I] | [FilterCondition<I>, "or", FilterCondition<I>] | [FilterCondition<I>, "and", FilterCondition<I>] | [FilterCondition<I>]
 
 export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exist"]
 

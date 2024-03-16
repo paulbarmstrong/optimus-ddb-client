@@ -27,20 +27,17 @@ This is low level documentation. Please see [README.md](../README.md) for the hi
 
 ### FilterCondition
 
-Ƭ **FilterCondition**\<`L`, `R`\>: [`L`, ``"exists"`` \| ``"doesn't exist"``] \| `R` extends `string` ? [`L`, ``"="``, `R`] \| [`L`, ``"<>"`` \| ``"!="`` \| ``"<"`` \| ``">"`` \| ``"<="`` \| ``">="`` \| ``"begins with"`` \| ``"contains"``, `string`] \| [`L`, ``"between"``, `string`, ``"and"``, `string`] \| [`L`, ``"in"``, `R`[]] : `R` extends `number` \| `Uint8Array` ? [`L`, ``"="`` \| ``"<>"`` \| ``"!="`` \| ``"<"`` \| ``">"`` \| ``"<="`` \| ``">="``, `R`] \| [`L`, ``"between"``, `R`, ``"and"``, `R`] \| [`L`, ``"in"``, `R`[]] : `R` extends `any`[] ? [`L`, ``"contains"``, `any`] : [`L`, ``"="``, `R`]
-
-Type representing a condition for filtering query or scan results.
+Ƭ **FilterCondition**\<`I`\>: \{ [K in keyof I]: FilterConditionLeaf\<K, I[K]\> }[keyof `I`] \| [[`FilterCondition`](index.md#filtercondition)\<`I`\>, ``"or"``, [`FilterCondition`](index.md#filtercondition)\<`I`\>] \| [[`FilterCondition`](index.md#filtercondition)\<`I`\>, ``"and"``, [`FilterCondition`](index.md#filtercondition)\<`I`\>] \| [[`FilterCondition`](index.md#filtercondition)\<`I`\>]
 
 #### Type parameters
 
-| Name |
-| :------ |
-| `L` |
-| `R` |
+| Name | Type |
+| :------ | :------ |
+| `I` | extends `Record`\<`string`, `Shape`\> |
 
 #### Defined in
 
-[src/Types.ts:26](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L26)
+[src/Types.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L41)
 
 ___
 

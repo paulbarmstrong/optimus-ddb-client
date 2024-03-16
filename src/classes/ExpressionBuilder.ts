@@ -1,5 +1,3 @@
-
-
 export class ExpressionBuilder {
 	#attributeNames: Map<string, string>
 	#attributeValues: Map<string, any>
