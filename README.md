@@ -7,7 +7,7 @@ OptimusDdbClient is a TypeScript/JavaScript DynamoDB client with the following a
  * **Strong typing.** All items, key parameters, and query conditions are statically typed for each table's specific indexes and items. Runtime type validation is performed when pulling items out of DynamoDB and committing items into DynamoDB.
  * **Built-in transactions and optimistic locking.** An abstracted version number attribute facilitates optimistic locking. When you commit changes OptimusDdbClient does a TransactWriteItems with the items' version attribute values as conditions of the transaction. That guarentees that either all of the items in the transaction change exactly as they did in your code, or the transaction is cancelled and OptimusDdbClient throws an error.
  * **Managed expressions.** Instead of a string, expression name mappings, and expression value mappings, OptimusDdbClient's Query and Scan conditions are specified with statically typed tuples. Because of that you can be confident that your conditions are valid and you don't have to worry about mapping expression names and expression values.
- * **No size limits for BatchGetItem, Query, or Scan.** OptimusDdbClient's getItems method will call BatchGetItem until all requested items. OptimusDdbClient's queryItems and scanItems methods will call Query or Scan respectively until the optional limit you specify is reached or it hits the end of the index.
+ * **No size limits for BatchGetItem, Query, or Scan.** OptimusDdbClient's getItems method will call BatchGetItem until all requested items are fetched. OptimusDdbClient's queryItems and scanItems methods will call Query or Scan respectively until the optional limit you specify is reached or it hits the end of the index.
 
 ### Requirements
 
