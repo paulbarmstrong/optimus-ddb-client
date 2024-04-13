@@ -489,3 +489,35 @@ describe("table with UnionShape itemShape", () => {
 		expect(optimus.commitItems({ items: [event] })).rejects.toThrow(ItemShapeValidationError)
 	})
 })
+
+test("item tries to get committed with extra attribute", async () => {
+	const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
+	await ddbDocumentClient.send(new PutCommand({
+		TableName: "Resources",
+		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 }
+	}))
+	const resource: Resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
+	resource.status = "deleted"
+	resource.updatedAt = 1702172271700
+	;(resource as any).telemetryCode = "49838943"
+	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
+})
+
+
+test("allowExtraAttributes with item with extra attributes", async () => {
+	const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [], "ALL", { allowExtraAttributes: true })
+	await ddbDocumentClient.send(new PutCommand({
+		TableName: "Resources",
+		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, telemetryCode: "2817278", version: 10 }
+	}))
+	const resource: Resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
+	resource.status = "deleted"
+	resource.updatedAt = 1702172271700
+	await optimus.commitItems({ items: [resource] })
+	const getItemRes = await ddbDocumentClient.send(new GetCommand({
+		TableName: "Resources",
+		Key: { id: "bbbb" },
+		ConsistentRead: true
+	}))
+	expect(getItemRes.Item).toStrictEqual({ id: "bbbb", status: "deleted", updatedAt: 1702172271700, telemetryCode: "2817278", version: 11 })
+})

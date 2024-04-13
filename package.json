@@ -1,6 +1,6 @@
 {
 	"name": "optimus-ddb-client",
-	"version": "1.0.43",
+	"version": "1.0.44",
 	"main": "dist/src/index",
 	"typings": "dist/src/index",
 	"scripts": {
