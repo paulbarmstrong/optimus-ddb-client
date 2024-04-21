@@ -5,8 +5,7 @@ import { NumberShape, ObjectShape, Shape, s } from "shape-tape"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { DYNAMO_DB_LOCAL_CLIENT_CONFIG } from "./Constants"
 
-export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array<Gsi<any,any,any>>, gsiProjectionType: "ALL" | "KEYS_ONLY" = "ALL",
-		optimusDdbClientParams?: { allowExtraAttributes?: boolean }): Promise<[OptimusDdbClient, DynamoDBDocumentClient]> {
+export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array<Gsi<any,any,any>>, gsiProjectionType: "ALL" | "KEYS_ONLY" = "ALL"): Promise<[OptimusDdbClient, DynamoDBDocumentClient]> {
 	const dynamoDb: DynamoDBClient = new DynamoDBClient(DYNAMO_DB_LOCAL_CLIENT_CONFIG)
 	const existingTables: Array<string> = (await dynamoDb.send(new ListTablesCommand({}))).TableNames!
 	await Promise.all(existingTables.map(async tableName => {
@@ -50,7 +49,7 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 		numAvailableTables = tableStatuses.filter(status => status === "ACTIVE").length
 	} while (numAvailableTables !== tables.length)
 
-	return [new OptimusDdbClient({ dynamoDbClientConfig: DYNAMO_DB_LOCAL_CLIENT_CONFIG, ...optimusDdbClientParams }), DynamoDBDocumentClient.from(dynamoDb)]
+	return [new OptimusDdbClient({ dynamoDbClientConfig: DYNAMO_DB_LOCAL_CLIENT_CONFIG }), DynamoDBDocumentClient.from(dynamoDb)]
 }
 
 function shapeToDdbAttributeType(shape: Shape): ScalarAttributeType {

@@ -37,13 +37,9 @@ export class OptimusDdbClient {
 	#recordedItems: WeakMap<Record<string, any>, ItemData>
 	/** @hidden */
 	#ddbDocumentClient: DynamoDBDocumentClient
-	/** @hidden */
-	#allowExtraAttributes: boolean
 	constructor(params?: {
 		/** Any DynamoDBClientConfig options for OptimusDdbClient to consider. */
-		dynamoDbClientConfig?: DynamoDBClientConfig,
-		/** Optionally allow attributes on items that aren't defined by the Table's itemShape. */
-		allowExtraAttributes?: boolean
+		dynamoDbClientConfig?: DynamoDBClientConfig
 	}) {
 		this.#recordedItems = new WeakMap<Record<string, any>, ItemData>()
 		this.#ddbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({...params?.dynamoDbClientConfig}), {
@@ -51,7 +47,6 @@ export class OptimusDdbClient {
 				removeUndefinedValues: true
 			}
 		})
-		this.#allowExtraAttributes = params?.allowExtraAttributes === true
 	}
 
 	/**
@@ -320,7 +315,6 @@ export class OptimusDdbClient {
 			validateDataShape({
 				data: item,
 				shape: itemData.table.itemShape,
-				allowExtraProperties: this.#allowExtraAttributes,
 				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 			})
 			const keyChanged: boolean = itemData.table.keyAttributes
@@ -437,7 +431,6 @@ export class OptimusDdbClient {
 		const validatedItem: ShapeToType<typeof table.itemShape> = validateDataShape({
 			data: item,
 			shape: table.itemShape,
-			allowExtraProperties: this.#allowExtraAttributes,
 			shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 		})
 		this.#recordedItems.set(item, {
