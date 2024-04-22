@@ -37,7 +37,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends keyof `ShapeToType`\<`I`\> |
 | `S` | extends keyof `ShapeToType`\<`I`\> = `never` |
 
@@ -67,7 +67,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` = `never` |
 

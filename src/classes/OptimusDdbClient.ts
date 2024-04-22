@@ -56,7 +56,7 @@ export class OptimusDdbClient {
 	 * @returns The drafted item.
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	draftItem<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I>, 
+	draftItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I>, 
 			T extends ShapeToType<I>>(params: {
 		/** Table where the item should go. */
 		table: Table<I,P,S>,
@@ -88,7 +88,7 @@ export class OptimusDdbClient {
 	 * @throws ItemNotFoundError if the item is not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	async getItem<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>,
+	async getItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>,
 			S extends keyof ShapeToType<I>, E extends Error | undefined = Error>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
@@ -134,7 +134,7 @@ export class OptimusDdbClient {
 	 * @throws ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async getItems<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>,
+	async getItems<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>,
 			S extends keyof ShapeToType<I>>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
@@ -205,7 +205,7 @@ export class OptimusDdbClient {
 	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async queryItems<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
+	async queryItems<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
 			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to query. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
@@ -263,7 +263,7 @@ export class OptimusDdbClient {
 	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async scanItems<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
+	async scanItems<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
 			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to scan. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
@@ -422,7 +422,7 @@ export class OptimusDdbClient {
 	}
 	
 	/** @hidden */
-	#recordAndStripItem<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>, 
+	#recordAndStripItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, 
 			S extends keyof ShapeToType<I>>(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
 		if (!create && !Number.isInteger(item[table.versionAttribute]))
 			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
@@ -444,7 +444,7 @@ export class OptimusDdbClient {
 	}
 
 	/** @hidden */
-	#getUpdateDynamoDbExpression<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>>
+	#getUpdateDynamoDbExpression<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>>
 			(item: ShapeToType<I>, itemData: ItemData) {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
 		const set = itemData.table.attributes
@@ -465,7 +465,7 @@ export class OptimusDdbClient {
 	}
 
 	/** @hidden */
-	async #handleQueryOrScan<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
+	async #handleQueryOrScan<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
 			S extends keyof MergeUnion<ShapeToType<I>>>(params: {
 		index: Table<I,P,S> | Gsi<I,P,S>
         commandInput: QueryCommandInput | ScanCommandInput,

@@ -6,7 +6,7 @@ import { MergeUnion } from "../Types"
  * Gsi represents a DynamoDB Global Secondary Index (GSI). It can be created once and then
  * provided to OptimusDdbClient when doing query and scan operations.
  */
-export class Gsi<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never> {
+export class Gsi<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never> {
 	/** The Table class instance representing the DynamoDB table of the GSI. */
 	table: Table<I,any,any>
 	/** The IndexName of the GSI. */

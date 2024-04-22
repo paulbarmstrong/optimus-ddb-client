@@ -98,7 +98,7 @@ created in DynamoDB once it is included in the `items` of a call to `commitItems
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `T` | extends {} \| {} |
@@ -138,7 +138,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html)
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `E` | extends `undefined` \| `Error` = `Error` |
@@ -210,7 +210,7 @@ necessary to get all the requested items.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 
@@ -287,7 +287,7 @@ that don't project the attributes defined by the Table's itemShape.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `L` | extends `undefined` \| `number` = `undefined` |
@@ -350,7 +350,7 @@ that don't project the attributes defined by the Table's itemShape.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `L` | extends `undefined` \| `number` = `undefined` |

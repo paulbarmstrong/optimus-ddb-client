@@ -9,7 +9,7 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends keyof `MergeUnion`\<`ShapeToType`\<`I`\>\> |
 | `S` | extends keyof `MergeUnion`\<`ShapeToType`\<`I`\>\> = `never` |
 
@@ -36,7 +36,7 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`\> \| `UnionShape`\<`ObjectShape`\<`any`\>[]\> |
+| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` = `never` |
 

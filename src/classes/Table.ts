@@ -33,7 +33,7 @@ import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
  * Please see the shape-tape documentation for more details about creating shapes.
  * 
  */
-export class Table<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I> = never> {
+export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I> = never> {
 	/** The name of the DynamoDB table. */
 	readonly tableName: string
 	/** Shape representing the structure of items in the table. Please see the Table class documentation for details. */
@@ -70,10 +70,10 @@ export class Table<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any
 		this.itemShape = params.itemShape
 		this.partitionKey = params.partitionKey
 		this.sortKey = params.sortKey
-		if ((params.itemShape as ObjectShape<any>).propertyShapes !== undefined) {
-			this.attributes = Object.keys((params.itemShape as ObjectShape<any>).propertyShapes)
+		if ((params.itemShape as ObjectShape<any,any>).propertyShapes !== undefined) {
+			this.attributes = Object.keys((params.itemShape as ObjectShape<any,any>).propertyShapes)
 		} else {
-			const attributesNotUnique = (params.itemShape as UnionShape<Array<ObjectShape<any>>>)
+			const attributesNotUnique = (params.itemShape as UnionShape<Array<ObjectShape<any,any>>>)
 				.memberShapes.map(x => Object.keys(x.propertyShapes)).flat()
 			this.attributes = [...new Set(attributesNotUnique)]
 		}

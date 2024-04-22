@@ -136,14 +136,14 @@ function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName
 	if (table.itemShape.propertyShapes !== undefined) {
 		return table.itemShape.propertyShapes[attributeName]
 	} else {
-		const specificMembers: Array<Shape> = (table.itemShape.memberShapes as Array<ObjectShape<any>>)
+		const specificMembers: Array<Shape> = (table.itemShape.memberShapes as Array<ObjectShape<any,any>>)
 			.filter(member => Object.keys(member.propertyShapes).includes(attributeName))
 			.map(member => member.propertyShapes[attributeName])
 		return s.union(specificMembers)
 	}
 }
 
-export function getIndexTable<I extends ObjectShape<any> | UnionShape<Array<ObjectShape<any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never>
+export function getIndexTable<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never>
 		(index: Table<I,P,S> | Gsi<I,P,S>): Table<I,P,S> {
 	if (isGsi(index)) {
 		return (index as Gsi<I,P,S>).table
