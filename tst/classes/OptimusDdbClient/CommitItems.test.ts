@@ -3,6 +3,7 @@ import { Connection, Resource, connectionsTable, resourceEventsTable, resourcesT
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { ItemShapeValidationError, OptimisticLockError, Table } from "../../../src"
 import { ShapeToType, s } from "shape-tape"
+import { TableRelationshipType, TableRelationshipViolationError } from "../../../src/Types"
 
 test("create, update, then delete", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([connectionsTable], [])
@@ -503,3 +504,277 @@ test("item tries to get committed with extra attribute", async () => {
 	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
 })
 
+describe("regular ONE_TO_ONE relationship", () => {
+	const aliasesTable = new Table({
+		tableName: "Aliases",
+		itemShape: s.object({
+			id: s.string(),
+			firstLetter: s.string(),
+			userId: s.string()
+		}),
+		partitionKey: "id"
+	})
+	const usersTable = new Table({
+		tableName: "Users",
+		itemShape: s.object({
+			id: s.string(),
+			alias: s.string()
+		}),
+		partitionKey: "id"
+	})
+	usersTable.addRelationship({
+		type: TableRelationshipType.ONE_TO_ONE,
+		pointerAttributeName: "alias",
+		peerTable: aliasesTable,
+		peerPointerAttributeName: "userId"
+	})
+	test("create without peer", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		const alias = optimus.draftItem({
+			table: aliasesTable,
+			item: { id: "paul", firstLetter: "p", userId: "bbbb" }
+		})
+
+		expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("delete without peer in the commit", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		optimus.markItemForDeletion({ item: alias })
+		optimus.markItemForDeletion({ item: user })
+
+		expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
+		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("item changes ID and peer isn't in the commit", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		user.id = "cccc"
+
+		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("item changes ID and peer isn't updated", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		user.id = "cccc"
+
+		expect(optimus.commitItems({ items: [alias, user] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("item changes its pointer and peer isn't updated", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		alias.userId = "cccc"
+
+		expect(optimus.commitItems({ items: [alias, user] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("item changes its ID and peer isn't in the commit", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		user.id = "cccc"
+		alias.userId = "cccc"
+
+		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("item changes its pointer and peer isn't in the commit", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		user.id = "cccc"
+		alias.userId = "cccc"
+
+		expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("both are updated properly", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { id: "paul", firstLetter: "p", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { id: "paul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		user.id = "cccc"
+		alias.userId = "cccc"
+
+		await optimus.commitItems({ items: [alias, user] })
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "Aliases",
+			Key: { id: "paul" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "paul", firstLetter: "p", userId: "cccc", version: 1 })
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "Users",
+			Key: { id: "cccc" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "cccc", alias: "paul", version: 1 })
+	})
+
+	test("creating and switching peers", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		const userId = "bbbb"
+		const paulAlias = optimus.draftItem({
+			table: aliasesTable,
+			item: { id: "paul", firstLetter: "p", userId: userId }
+		})
+		const user = optimus.draftItem({
+			table: usersTable,
+			item: { id: userId, alias: paulAlias.id }
+		})
+
+		await optimus.commitItems({ items: [paulAlias, user] })
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "Aliases",
+			Key: { id: "paul" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "paul", firstLetter: "p", userId: "bbbb", version: 0 })
+		expect((await ddbDocumentClient.send(new GetCommand({
+			TableName: "Users",
+			Key: { id: "bbbb" },
+			ConsistentRead: true
+		}))).Item).toStrictEqual({ id: "bbbb", alias: "paul", version: 0 })
+
+		const pabloAlias = optimus.draftItem({
+			table: aliasesTable,
+			item: { id: "pablo", firstLetter: "p", userId: "bbbb" }
+		})
+		optimus.markItemForDeletion({ item: paulAlias })
+		user.alias = "pablo"
+		
+		await expect(optimus.commitItems({ items: [paulAlias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [pabloAlias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [paulAlias, user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [pabloAlias, user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [paulAlias, pabloAlias] })).rejects.toThrow(TableRelationshipViolationError)
+		await optimus.commitItems({ items: [paulAlias, pabloAlias, user] })
+	})
+})
+
+describe("composite key table ONE_TO_ONE relationship", () => {
+	const aliasesTable = new Table({
+		tableName: "Aliases",
+		itemShape: s.object({
+			firstLetter: s.string(),
+			ending: s.string(),
+			userId: s.string()
+		}),
+		partitionKey: "firstLetter",
+		sortKey: "ending"
+	})
+	const usersTable = new Table({
+		tableName: "Users",
+		itemShape: s.object({
+			id: s.string(),
+			alias: s.string()
+		}),
+		partitionKey: "id"
+	})
+	usersTable.addRelationship({
+		type: TableRelationshipType.ONE_TO_ONE,
+		pointerAttributeName: "alias",
+		peerTable: aliasesTable,
+		peerPointerAttributeName: "userId",
+		compositeKeySeparator: ""
+	})
+	test("creating and switching peers", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		const userId = "bbbb"
+		const paulAlias = optimus.draftItem({
+			table: aliasesTable,
+			item: { firstLetter: "p", ending: "aul", userId: userId }
+		})
+		const user = optimus.draftItem({
+			table: usersTable,
+			item: { id: userId, alias: `${paulAlias.firstLetter}${paulAlias.ending}` }
+		})
+		await optimus.commitItems({ items: [paulAlias, user] })
+
+		const pabloAlias = optimus.draftItem({
+			table: aliasesTable,
+			item: { firstLetter: "p", ending: "ablo", userId: "bbbb" }
+		})
+		optimus.markItemForDeletion({ item: paulAlias })
+		user.alias = "pablo"
+		
+		await expect(optimus.commitItems({ items: [paulAlias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [pabloAlias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [paulAlias, user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [pabloAlias, user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [paulAlias, pabloAlias] })).rejects.toThrow(TableRelationshipViolationError)
+		await optimus.commitItems({ items: [paulAlias, pabloAlias, user] })
+	})
+	test("item changes its ID and peer isn't in the commit", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Aliases",
+			Item: { firstLetter: "p", ending: "aul", userId: "bbbb", version: 0 },
+		}))
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Users",
+			Item: { id: "bbbb", alias: "paul", version: 0 },
+		}))
+		const alias = await optimus.getItem({ table: aliasesTable, key: { firstLetter: "p", ending: "aul" } })
+		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
+		user.id = "cccc"
+		alias.userId = "cccc"
+
+		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+})

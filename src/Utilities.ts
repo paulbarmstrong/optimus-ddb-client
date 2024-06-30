@@ -1,9 +1,12 @@
 import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
-import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKeyCondition, SortKeyCondition, MergeUnion } from "./Types"
+import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKeyCondition, SortKeyCondition,
+	MergeUnion, TableRelationshipViolationError, 
+	TableRelationshipType} from "./Types"
 import { ObjectShape, Shape, ShapeToType, UnionShape, s, validateDataShape }  from "shape-tape"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
+import { ItemData } from "./classes/OptimusDdbClient"
 
 export function plurality(num: number) {
 	return num === 1 ? "" : "s"
@@ -154,4 +157,57 @@ export function getIndexTable<I extends ObjectShape<any,any> | UnionShape<Array<
 
 export function isGsi(index: Table<any,any,any> | Gsi<any,any,any>): boolean {
 	return (index as Gsi<any,any,any>).indexName !== undefined
+}
+
+export function flipRelationshipType(relationshipType: TableRelationshipType): TableRelationshipType {
+	//if (relationshipType === TableRelationshipType.ONE_TO_MANY) return TableRelationshipType.MANY_TO_ONE
+	//if (relationshipType === TableRelationshipType.MANY_TO_ONE) return TableRelationshipType.ONE_TO_MANY
+	return relationshipType
+}
+
+export function getKeyAttributesFromAttributes(table: Table<any, any, any>, item: Record<string, any>): Record<string, any> {
+	return Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]]))
+}
+
+export function getItemKeyPointer(table: Table<any, any, any>, item: Record<string, any>, separator: string): string | number {
+	if (table.sortKey === undefined) {
+		return item[table.partitionKey]
+	} else {
+		return `${item[table.partitionKey]}${separator}${item[table.sortKey]}`
+	}
+}
+
+export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<string, any>, ItemData>, items: Array<Record<string, any>>) {
+	items.forEach(item => {
+		const itemData = recordedItems.get(item)!
+		const keyChanged: boolean = itemData.table.keyAttributes
+			.filter(keyAttr => itemData.existingItem[keyAttr] !== item[keyAttr]).length > 0
+		itemData.table.relationships.forEach(relationship => {
+			if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+				const oldPeerItem = items.find(peerItem => {
+					const peerItemData = recordedItems.get(peerItem)!
+					return peerItemData.table === relationship.peerTable && !peerItemData.create &&
+						peerItemData.existingItem[relationship.peerPointerAttributeName] ===
+						getItemKeyPointer(itemData.table, itemData.existingItem, relationship.compositeKeySeparator)
+				})
+				const newPeerItem = items.find(peerItem => {
+					const peerItemData = recordedItems.get(peerItem)!
+					return peerItemData.table === relationship.peerTable && !peerItemData.delete &&
+						peerItem[relationship.peerPointerAttributeName] ===
+						getItemKeyPointer(itemData.table, item, relationship.compositeKeySeparator)
+				})
+				const pointerChanged = itemData.existingItem[relationship.pointerAttributeName] !== item[relationship.pointerAttributeName]
+				if (itemData.create || itemData.delete || keyChanged || pointerChanged || oldPeerItem === undefined || newPeerItem === undefined) {
+					if ((oldPeerItem === undefined && !itemData.create)
+						|| (itemData.delete && newPeerItem !== undefined)
+						|| (!itemData.delete && newPeerItem === undefined))
+						throw new TableRelationshipViolationError({
+							item: item,
+							tableRelationshipType: relationship.type,
+							tables: [itemData.table, relationship.peerTable]
+						})
+				}
+			}
+		})
+	})
 }

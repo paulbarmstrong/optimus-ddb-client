@@ -14,3 +14,5 @@ export const OPTIMUS_OPERATORS = {
 	["contains"]: "contains",
 	["in"]: "IN"
 }
+
+export const DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR = "."

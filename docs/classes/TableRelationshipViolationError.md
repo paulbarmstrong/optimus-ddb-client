@@ -1,52 +1,52 @@
-[optimus-ddb-client](../index.md) / ItemNotFoundError
+[optimus-ddb-client](../index.md) / TableRelationshipViolationError
 
-# Class: ItemNotFoundError
+# Class: TableRelationshipViolationError
 
-Error for when item(s) are not found. It means that item(s) did not exist in the index when
-OptimusDdbClient's `getItem` or `getItems` was called.
+Error for when OptimusDdbClient `commitItems`' items violate a Table relationship.
 
 ## Hierarchy
 
 - `Error`
 
-  ↳ **`ItemNotFoundError`**
+  ↳ **`TableRelationshipViolationError`**
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](ItemNotFoundError.md#constructor)
+- [constructor](TableRelationshipViolationError.md#constructor)
 
 ### Properties
 
-- [cause](ItemNotFoundError.md#cause)
-- [itemKeys](ItemNotFoundError.md#itemkeys)
-- [message](ItemNotFoundError.md#message)
-- [name](ItemNotFoundError.md#name)
-- [stack](ItemNotFoundError.md#stack)
-- [prepareStackTrace](ItemNotFoundError.md#preparestacktrace)
-- [stackTraceLimit](ItemNotFoundError.md#stacktracelimit)
+- [cause](TableRelationshipViolationError.md#cause)
+- [message](TableRelationshipViolationError.md#message)
+- [name](TableRelationshipViolationError.md#name)
+- [stack](TableRelationshipViolationError.md#stack)
+- [prepareStackTrace](TableRelationshipViolationError.md#preparestacktrace)
+- [stackTraceLimit](TableRelationshipViolationError.md#stacktracelimit)
 
 ### Methods
 
-- [captureStackTrace](ItemNotFoundError.md#capturestacktrace)
+- [captureStackTrace](TableRelationshipViolationError.md#capturestacktrace)
 
 ## Constructors
 
 ### constructor
 
-• **new ItemNotFoundError**(`params`): [`ItemNotFoundError`](ItemNotFoundError.md)
+• **new TableRelationshipViolationError**(`params`): [`TableRelationshipViolationError`](TableRelationshipViolationError.md)
 
 #### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.itemKeys` | `Record`\<`string`, `any`\>[] | The keys of the item(s) that were not found. |
+| `params.item` | `Record`\<`string`, `any`\> | Item triggering the Table relationship violation. |
+| `params.tableRelationshipType` | [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one) | The type of the TableRelationship. |
+| `params.tables` | [[`Table`](Table.md)\<`any`, `any`, `any`\>, [`Table`](Table.md)\<`any`, `any`, `any`\>] | The tables of the TableRelationship. |
 
 #### Returns
 
-[`ItemNotFoundError`](ItemNotFoundError.md)
+[`TableRelationshipViolationError`](TableRelationshipViolationError.md)
 
 #### Overrides
 
@@ -54,7 +54,7 @@ Error.constructor
 
 #### Defined in
 
-[src/Types.ts:97](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L97)
+[src/Types.ts:141](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L141)
 
 ## Properties
 
@@ -69,18 +69,6 @@ Error.cause
 #### Defined in
 
 node_modules/typescript/lib/lib.es2022.error.d.ts:24
-
-___
-
-### itemKeys
-
-• `Readonly` **itemKeys**: `Record`\<`string`, `any`\>[]
-
-The keys of the item(s) that were not found.
-
-#### Defined in
-
-[src/Types.ts:96](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L96)
 
 ___
 
@@ -100,7 +88,7 @@ ___
 
 ### name
 
-• **name**: `string` = `"ItemNotFoundError"`
+• **name**: `string` = `"TableRelationshipViolationError"`
 
 #### Overrides
 
@@ -108,7 +96,7 @@ Error.name
 
 #### Defined in
 
-[src/Types.ts:94](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L94)
+[src/Types.ts:140](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L140)
 
 ___
 

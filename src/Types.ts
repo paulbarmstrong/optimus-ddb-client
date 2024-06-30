@@ -1,5 +1,6 @@
-import { Shape, ShapeValidationError } from "shape-tape"
+import { ShapeValidationError } from "shape-tape"
 import { plurality } from "./Utilities"
+import { Table } from "./classes/Table"
 
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
 
@@ -40,7 +41,30 @@ export type FilterConditionLeaf<L, R> = [L, "exists" | "doesn't exist"] | (R ext
 /** Type representing a condition for filtering items during a query or scan. */
 export type FilterCondition<I extends Record<string, any>> = {[K in keyof I]: FilterConditionLeaf<K, I[K]>}[keyof I] | [FilterCondition<I>, "or", FilterCondition<I>] | [FilterCondition<I>, "and", FilterCondition<I>] | [FilterCondition<I>]
 
+/** @hidden */
 export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exist"]
+
+/** Type representing the nature of a relationship between two Tables */
+export enum TableRelationshipType {
+	/** There is a 1:1 mapping between each item in the first Table and the second Table. */
+	ONE_TO_ONE = "ONE_TO_ONE",
+	//ONE_TO_MANY = "ONE_TO_MANY",
+	//MANY_TO_ONE = "MANY_TO_ONE",
+	//MANY_TO_MANY = "MANY_TO_MANY"
+}
+
+/** @hidden */
+export type FlipTableRelationshipType<RT> =
+	//RT extends TableRelationshipType.ONE_TO_MANY ? TableRelationshipType.MANY_TO_ONE:
+	//RT extends TableRelationshipType.MANY_TO_ONE ? TableRelationshipType.ONE_TO_MANY:
+	RT
+
+/** @hidden */
+export type TableRelationshipTypeToAttType<RT> = RT extends TableRelationshipType.ONE_TO_ONE ? (//| TableRelationshipType.ONE_TO_MANY ? (
+	string | number
+) : (
+	Array<string | number>
+)
 
 /**
  * Error for when OptimusDdbClient is unable to get DynamoDB to process one or more
@@ -106,6 +130,24 @@ export class ItemShapeValidationError extends ShapeValidationError {
 	name = "ItemShapeValidationError"
 	constructor(params: ConstructorParameters<typeof ShapeValidationError>[0]) {
 		super(params)
+	}
+}
+
+/**
+ * Error for when OptimusDdbClient `commitItems`' items violate a Table relationship.
+ */
+export class TableRelationshipViolationError extends Error {
+	name = "TableRelationshipViolationError"
+	constructor(params: {
+		/** Item triggering the Table relationship violation. */
+		item: Record<string, any>,
+		/** The type of the TableRelationship. */
+		tableRelationshipType: TableRelationshipType,
+		/** The tables of the TableRelationship. */
+		tables: [Table<any, any, any>, Table<any, any, any>]
+	}) {
+		super(`Item violates ${params.tableRelationshipType} relationship between ${params.tables.map(table => table.tableName).join(" and ")
+			}: ${JSON.stringify(params.item)}`)
 	}
 }
 

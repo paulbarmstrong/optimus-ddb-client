@@ -57,7 +57,7 @@ ShapeValidationError.constructor
 
 #### Defined in
 
-[src/Types.ts:107](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L107)
+[src/Types.ts:131](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L131)
 
 ## Properties
 
@@ -115,7 +115,7 @@ ShapeValidationError.name
 
 #### Defined in
 
-[src/Types.ts:106](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L106)
+[src/Types.ts:130](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L130)
 
 ___
 

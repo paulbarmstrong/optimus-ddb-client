@@ -6,6 +6,10 @@ This is low level documentation. Please see [README.md](../README.md) for the hi
 
 ## Table of contents
 
+### Enumerations
+
+- [TableRelationshipType](enums/TableRelationshipType.md)
+
 ### Classes
 
 - [Gsi](classes/Gsi.md)
@@ -15,6 +19,7 @@ This is low level documentation. Please see [README.md](../README.md) for the hi
 - [OptimisticLockError](classes/OptimisticLockError.md)
 - [OptimusDdbClient](classes/OptimusDdbClient.md)
 - [Table](classes/Table.md)
+- [TableRelationshipViolationError](classes/TableRelationshipViolationError.md)
 - [UnprocessedKeysError](classes/UnprocessedKeysError.md)
 
 ### Type Aliases
@@ -39,7 +44,7 @@ Type representing a condition for filtering items during a query or scan.
 
 #### Defined in
 
-[src/Types.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L41)
+[src/Types.ts:42](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L42)
 
 ___
 
@@ -58,7 +63,7 @@ Type representing a condition that specifies a partition.
 
 #### Defined in
 
-[src/Types.ts:12](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L12)
+[src/Types.ts:13](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L13)
 
 ___
 
@@ -77,4 +82,4 @@ Type representing a condition that specifies how a partition is queried.
 
 #### Defined in
 
-[src/Types.ts:15](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L15)
+[src/Types.ts:16](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L16)

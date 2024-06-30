@@ -8,8 +8,8 @@ when doing operations on items.
 #### Regarding `itemShape`
 
 The `itemShape` constructor parameter is a Shape representing the structure of items in the table. The Shape
-should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version attribute which is abstracted from 
-OptimusDdbClient consumers.
+should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version
+attribute which is abstracted from OptimusDdbClient consumers.
 
 The mappings between DynamoDB types and Shapes are as follows:
 
@@ -57,6 +57,14 @@ Please see the shape-tape documentation for more details about creating shapes.
 - [tableName](Table.md#tablename)
 - [versionAttribute](Table.md#versionattribute)
 
+### Accessors
+
+- [relationships](Table.md#relationships)
+
+### Methods
+
+- [addRelationship](Table.md#addrelationship)
+
 ## Constructors
 
 ### constructor
@@ -88,7 +96,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 #### Defined in
 
-[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L54)
+[src/classes/Table.ts:65](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L65)
 
 ## Properties
 
@@ -100,7 +108,7 @@ The names of all of the item attributes (except for the version attribute).
 
 #### Defined in
 
-[src/classes/Table.ts:46](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L46)
+[src/classes/Table.ts:57](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L57)
 
 ___
 
@@ -112,7 +120,7 @@ Shape representing the structure of items in the table. Please see the Table cla
 
 #### Defined in
 
-[src/classes/Table.ts:40](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L40)
+[src/classes/Table.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L51)
 
 ___
 
@@ -125,7 +133,7 @@ if the table has a sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L51)
+[src/classes/Table.ts:62](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L62)
 
 ___
 
@@ -137,7 +145,7 @@ The name of the DynamoDB table's partition key.
 
 #### Defined in
 
-[src/classes/Table.ts:42](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L42)
+[src/classes/Table.ts:53](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L53)
 
 ___
 
@@ -149,7 +157,7 @@ The name of the DynamoDB table's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:44](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L44)
+[src/classes/Table.ts:55](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L55)
 
 ___
 
@@ -161,7 +169,7 @@ The name of the DynamoDB table.
 
 #### Defined in
 
-[src/classes/Table.ts:38](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L38)
+[src/classes/Table.ts:49](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L49)
 
 ___
 
@@ -173,4 +181,59 @@ The name of the version attribute used for optimistic locking.
 
 #### Defined in
 
-[src/classes/Table.ts:53](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L53)
+[src/classes/Table.ts:64](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L64)
+
+## Accessors
+
+### relationships
+
+• `get` **relationships**(): \{ `compositeKeySeparator`: `string` ; `peerPointerAttributeName`: `string` ; `peerTable`: [`Table`](Table.md)\<`any`, `any`, `any`\> ; `pointerAttributeName`: `string` ; `type`: [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one)  }[]
+
+The relationships that are applied to the Table. For each relationship, the peer Table has a
+corresponding inverted relationship to this Table.
+
+#### Returns
+
+\{ `compositeKeySeparator`: `string` ; `peerPointerAttributeName`: `string` ; `peerTable`: [`Table`](Table.md)\<`any`, `any`, `any`\> ; `pointerAttributeName`: `string` ; `type`: [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one)  }[]
+
+#### Defined in
+
+[src/classes/Table.ts:154](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L154)
+
+## Methods
+
+### addRelationship
+
+▸ **addRelationship**\<`RT`, `PointerAttributeName`, `I1`, `P1`, `S1`, `PeerPointerAttributeName`\>(`params`): `void`
+
+Add a relationship to the Table. Table relationships are enforced upon OptimusDdbClient's `commitItems`.
+
+#### Type parameters
+
+| Name | Type |
+| :------ | :------ |
+| `RT` | extends [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one) |
+| `PointerAttributeName` | extends `string` \| `number` \| `symbol` |
+| `I1` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `P1` | extends `string` \| `number` \| `symbol` |
+| `S1` | extends `string` \| `number` \| `symbol` |
+| `PeerPointerAttributeName` | extends `string` \| `number` \| `symbol` |
+
+#### Parameters
+
+| Name | Type | Description |
+| :------ | :------ | :------ |
+| `params` | `Object` | - |
+| `params.compositeKeySeparator?` | `string` | The separator used to join the partition key and sort key when one of the Tables has a sort key. |
+| `params.peerPointerAttributeName` | `PeerPointerAttributeName` | The attribute on the peer Table which points to items of this Table. |
+| `params.peerTable` | [`Table`](Table.md)\<`I1`, `P1`, `S1`\> | The other Table in the relationship. |
+| `params.pointerAttributeName` | `PointerAttributeName` | The attribute on this Table which points to items of the peer Table. |
+| `params.type` | `RT` | The nature of the table relationship. |
+
+#### Returns
+
+`void`
+
+#### Defined in
+
+[src/classes/Table.ts:110](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L110)

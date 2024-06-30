@@ -1,4 +1,7 @@
 import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
+import { flipRelationshipType } from "../Utilities"
+import { DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR } from "../Constants"
+import { FlipTableRelationshipType, TableRelationshipType, TableRelationshipTypeToAttType } from "../Types"
 
 /**
  * Table represents a DynamoDB Table. It can be created once and then provided to OptimusDdbClient
@@ -7,8 +10,8 @@ import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
  * #### Regarding `itemShape`
  * 
  * The `itemShape` constructor parameter is a Shape representing the structure of items in the table. The Shape
- * should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version attribute which is abstracted from 
- * OptimusDdbClient consumers.
+ * should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version
+ * attribute which is abstracted from OptimusDdbClient consumers.
  * 
  * The mappings between DynamoDB types and Shapes are as follows:
  * 
@@ -34,6 +37,14 @@ import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
  * 
  */
 export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I> = never> {
+	/** @hidden */
+	#relationships: Array<{
+		type: TableRelationshipType,
+		pointerAttributeName: string,
+		peerTable: Table<any, any, any>,
+		peerPointerAttributeName: string,
+		compositeKeySeparator: string
+	}>
 	/** The name of the DynamoDB table. */
 	readonly tableName: string
 	/** Shape representing the structure of items in the table. Please see the Table class documentation for details. */
@@ -66,6 +77,7 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		/** The name of the N attribute to be used for optimistic locking. The default is "version". */
 		versionAttribute?: string
 	}) {
+		this.#relationships = []
 		this.tableName = params.tableName
 		this.itemShape = params.itemShape
 		this.partitionKey = params.partitionKey
@@ -90,5 +102,56 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 				)
 			}
 		})
+	}
+
+	/**
+	 * Add a relationship to the Table. Table relationships are enforced upon OptimusDdbClient's `commitItems`.
+	 */
+	addRelationship<
+		RT extends TableRelationshipType,
+		PointerAttributeName extends { [K in keyof ShapeToType<I>]: (K extends P | S ? never : ShapeToType<I>[K] extends TableRelationshipTypeToAttType<RT> ? K : never) }[keyof ShapeToType<I>],
+		I1 extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>,
+		P1 extends keyof ShapeToType<I1>,
+		S1 extends keyof ShapeToType<I1>,
+		PeerPointerAttributeName extends { [K in keyof ShapeToType<I1>]: (K extends P1 | S1 ? never : ShapeToType<I1>[K] extends FlipTableRelationshipType<TableRelationshipTypeToAttType<RT>> ? K : never) }[keyof ShapeToType<I1>]
+	>(params: {
+		/** The nature of the table relationship. */
+		type: RT,
+		/** The attribute on this Table which points to items of the peer Table. */
+		pointerAttributeName: PointerAttributeName,
+		/** The other Table in the relationship. */
+		peerTable: Table<I1, P1, S1>,
+		/** The attribute on the peer Table which points to items of this Table. */
+		peerPointerAttributeName: PeerPointerAttributeName,
+		/** The separator used to join the partition key and sort key when one of the Tables has a sort key. */
+		compositeKeySeparator?: string,
+		/** @hidden */
+		_internal?: { secondary: boolean }
+	}) {
+		this.#relationships.push({
+			type: params.type,
+			pointerAttributeName: params.pointerAttributeName as unknown as string,
+			peerTable: params.peerTable,
+			peerPointerAttributeName: params.peerPointerAttributeName as unknown as string,
+			compositeKeySeparator: params.compositeKeySeparator ?? DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR
+		})
+		if (!params._internal?.secondary) {
+			params.peerTable.addRelationship({
+				type: flipRelationshipType(params.type),
+				pointerAttributeName: params.peerPointerAttributeName as any,
+				peerTable: this,
+				peerPointerAttributeName: params.pointerAttributeName as any,
+				compositeKeySeparator: params.compositeKeySeparator,
+				_internal: { secondary: true }
+			})
+		}
+	}
+
+	/** 
+	 * The relationships that are applied to the Table. For each relationship, the peer Table has a
+	 * corresponding inverted relationship to this Table.
+	 */
+	get relationships() {
+		return [...this.#relationships]
 	}
 }

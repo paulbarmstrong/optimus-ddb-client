@@ -4,16 +4,17 @@ import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteComma
 import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-tape"
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
-import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeyShape, isGsi } from "../Utilities"
+import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getKeyAttributesFromAttributes,
+	getLastEvaluatedKeyShape, isGsi, validateRelationshipsOnCommit } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
 import { SortKeyCondition, UnprocessedKeysError } from "../Types"
 import { ItemsPagesIterator } from "./ItemsPagesIterator"
 
-type ItemData = {
+export type ItemData = {
 	table: Table<any, any, any>,
-	existingKey: Record<string, any>,
+	existingItem: Record<string, any>,
 	version: number,
 	delete: boolean,
 	create: boolean
@@ -309,21 +310,25 @@ export class OptimusDdbClient {
 		optimisticLockErrorOverride?: (e: OptimisticLockError) => Error
 	}) {
 		if (params.items.length === 0) return
-		const transactItems = params.items.map(item => {
+		params.items.forEach(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
-			const itemData = this.#recordedItems.get(item)!
 			validateDataShape({
 				data: item,
-				shape: itemData.table.itemShape,
+				shape: this.#recordedItems.get(item)!.table.itemShape,
 				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 			})
+		})
+		validateRelationshipsOnCommit(this.#recordedItems, params.items)
+		const transactItems = params.items.map(item => {
+			const itemData = this.#recordedItems.get(item)!
 			const keyChanged: boolean = itemData.table.keyAttributes
-				.filter(keyAttr => itemData.existingKey[keyAttr] !== item[keyAttr]).length > 0
+				.filter(keyAttr => itemData.existingItem[keyAttr] !== item[keyAttr]).length > 0
+			
 			if (itemData.delete) {
 				return [{
 					Delete: {
 						TableName: itemData.table.tableName,
-						Key: itemData.existingKey,
+						Key: getKeyAttributesFromAttributes(itemData.table, itemData.existingItem),
 						...getDynamoDbExpression({
 							conditionConditions: [
 								[itemData.table.versionAttribute, "=", itemData.version]
@@ -354,7 +359,7 @@ export class OptimusDdbClient {
 					}, {
 						Delete: {
 							TableName: itemData.table.tableName,
-							Key: itemData.existingKey,
+							Key: getKeyAttributesFromAttributes(itemData.table, itemData.existingItem),
 							...getDynamoDbExpression({
 								conditionConditions: [
 									[itemData.table.versionAttribute, "=", itemData.version]
@@ -367,7 +372,7 @@ export class OptimusDdbClient {
 				return [{
 					Update: {
 						TableName: itemData.table.tableName,
-						Key: itemData.existingKey,
+						Key: getKeyAttributesFromAttributes(itemData.table, itemData.existingItem),
 						...this.#getUpdateDynamoDbExpression(item, itemData)
 					}
 				}]
@@ -401,7 +406,7 @@ export class OptimusDdbClient {
 			} else {
 				itemData.version = itemData.version + 1
 			}
-			itemData.existingKey = Object.fromEntries(itemData.table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]]))
+			itemData.existingItem = {...item}
 			if (itemData.delete) this.#recordedItems.delete(item)
 		})
 	}
@@ -435,7 +440,7 @@ export class OptimusDdbClient {
 		})
 		this.#recordedItems.set(item, {
 			table: table,
-			existingKey: Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]])),
+			existingItem: {...item},
 			version: version,
 			delete: false,
 			create: create
