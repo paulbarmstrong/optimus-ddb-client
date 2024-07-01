@@ -207,7 +207,53 @@ export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<stri
 							tables: [itemData.table, relationship.peerTable]
 						})
 				}
+			} else if (relationship.type === TableRelationshipType.MANY_TO_MANY) {
+				const error = new TableRelationshipViolationError({
+					item: item,
+					tableRelationshipType: relationship.type,
+					tables: [itemData.table, relationship.peerTable]
+				})
+				const oldItemKeyPointer = getItemKeyPointer(itemData.table, itemData.existingItem, relationship.compositeKeySeparator)
+				const latestItemKeyPointer = getItemKeyPointer(itemData.table, item, relationship.compositeKeySeparator)
+
+				const existingPointers = itemData.create ? [] : itemData.existingItem[relationship.pointerAttributeName] as Array<string | number>
+				const latestPointers = itemData.delete ? [] : item[relationship.pointerAttributeName] as Array<string | number>
+				const removedPointers: Array<string | number> = existingPointers
+					.filter(existingPointer => !latestPointers.includes(existingPointer))
+				const addedPointers: Array<string | number> = latestPointers
+					.filter(newPointer => !existingPointers.includes(newPointer))
+				if (keyChanged) {
+					existingPointers.forEach(existingPointer => {
+						const peerItem = items.find(peerItem => {
+							const peerItemData = recordedItems.get(peerItem)!
+							return peerItemData.table === relationship.peerTable &&
+								getItemKeyPointer(peerItemData.table, peerItemData.existingItem, relationship.compositeKeySeparator) === existingPointer
+						})
+						if (peerItem === undefined) throw error
+						const peerItemData = recordedItems.get(peerItem)!
+						const peerPointsBack = !peerItemData.delete && peerItem[relationship.peerPointerAttributeName].includes(oldItemKeyPointer)
+						if (peerPointsBack) throw error
+					})
+				}
+				[...removedPointers, ...addedPointers].forEach(changedPointer => {
+					const added = item[relationship.pointerAttributeName].includes(changedPointer)
+					const peerItem = items.find(peerItem => {
+						const peerItemData = recordedItems.get(peerItem)!
+						return peerItemData.table === relationship.peerTable &&
+							getItemKeyPointer(peerItemData.table, added ? peerItem : peerItemData.existingItem, relationship.compositeKeySeparator) === changedPointer
+					})
+					if (peerItem === undefined) throw error
+					const peerItemData = recordedItems.get(peerItem)!
+					const peerPointsBack = !peerItemData.delete && peerItem[relationship.peerPointerAttributeName].includes(latestItemKeyPointer)
+					if (added !== peerPointsBack) throw error
+				})
 			}
 		})
 	})
+}
+
+export function shallowCloneObjectAndDirectArrays<T extends Record<string, any>>(obj: T): T {
+	return {
+		...(Object.fromEntries(Object.entries(obj).map(entry => Array.isArray(entry) ? [...entry] : entry)))
+	} as T
 }

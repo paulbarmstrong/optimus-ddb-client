@@ -5,7 +5,7 @@ import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-t
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
 import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getKeyAttributesFromAttributes,
-	getLastEvaluatedKeyShape, isGsi, validateRelationshipsOnCommit } from "../Utilities"
+	getLastEvaluatedKeyShape, isGsi, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -406,7 +406,7 @@ export class OptimusDdbClient {
 			} else {
 				itemData.version = itemData.version + 1
 			}
-			itemData.existingItem = {...item}
+			itemData.existingItem = shallowCloneObjectAndDirectArrays(item)
 			if (itemData.delete) this.#recordedItems.delete(item)
 		})
 	}
@@ -440,7 +440,7 @@ export class OptimusDdbClient {
 		})
 		this.#recordedItems.set(item, {
 			table: table,
-			existingItem: {...item},
+			existingItem: shallowCloneObjectAndDirectArrays(item),
 			version: version,
 			delete: false,
 			create: create
