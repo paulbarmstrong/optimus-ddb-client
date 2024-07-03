@@ -1,7 +1,7 @@
 import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
 import { flipRelationshipType } from "../Utilities"
 import { DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR } from "../Constants"
-import { FlipTableRelationshipType, TableRelationshipType, TableRelationshipTypeToAttType } from "../Types"
+import { FlipTableRelationshipType, TableRelationship, TableRelationshipAlreadyExistsError, TableRelationshipType, TableRelationshipTypeToAttType } from "../Types"
 
 /**
  * Table represents a DynamoDB Table. It can be created once and then provided to OptimusDdbClient
@@ -38,13 +38,7 @@ import { FlipTableRelationshipType, TableRelationshipType, TableRelationshipType
  */
 export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I> = never> {
 	/** @hidden */
-	#relationships: Array<{
-		type: TableRelationshipType,
-		pointerAttributeName: string,
-		peerTable: Table<any, any, any>,
-		peerPointerAttributeName: string,
-		compositeKeySeparator: string
-	}>
+	#relationships: Array<TableRelationship>
 	/** The name of the DynamoDB table. */
 	readonly tableName: string
 	/** Shape representing the structure of items in the table. Please see the Table class documentation for details. */
@@ -125,9 +119,10 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		peerPointerAttributeName: PeerPointerAttributeName,
 		/** The separator used to join the partition key and sort key when one of the Tables has a sort key. */
 		compositeKeySeparator?: string,
-		/** @hidden */
-		_internal?: { secondary: boolean }
 	}) {
+		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable) !== undefined) {
+			throw new TableRelationshipAlreadyExistsError()
+		}
 		this.#relationships.push({
 			type: params.type,
 			pointerAttributeName: params.pointerAttributeName as unknown as string,
@@ -135,15 +130,16 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 			peerPointerAttributeName: params.peerPointerAttributeName as unknown as string,
 			compositeKeySeparator: params.compositeKeySeparator ?? DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR
 		})
-		if (!params._internal?.secondary) {
+		try {
 			params.peerTable.addRelationship({
 				type: flipRelationshipType(params.type),
 				pointerAttributeName: params.peerPointerAttributeName as any,
 				peerTable: this,
 				peerPointerAttributeName: params.pointerAttributeName as any,
 				compositeKeySeparator: params.compositeKeySeparator,
-				_internal: { secondary: true }
 			})
+		} catch (error) {
+			if ((error as Error).name !== "TableRelationshipAlreadyExistsError") throw error
 		}
 	}
 

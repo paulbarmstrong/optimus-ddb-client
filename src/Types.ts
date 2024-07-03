@@ -50,7 +50,7 @@ export enum TableRelationshipType {
 	ONE_TO_ONE = "ONE_TO_ONE",
 	//ONE_TO_MANY = "ONE_TO_MANY",
 	//MANY_TO_ONE = "MANY_TO_ONE",
-	//MANY_TO_MANY = "MANY_TO_MANY"
+	MANY_TO_MANY = "MANY_TO_MANY"
 }
 
 /** @hidden */
@@ -58,6 +58,15 @@ export type FlipTableRelationshipType<RT> =
 	//RT extends TableRelationshipType.ONE_TO_MANY ? TableRelationshipType.MANY_TO_ONE:
 	//RT extends TableRelationshipType.MANY_TO_ONE ? TableRelationshipType.ONE_TO_MANY:
 	RT
+
+/** @hidden */
+export type TableRelationship = {
+	type: TableRelationshipType,
+	pointerAttributeName: string,
+	peerTable: Table<any, any, any>,
+	peerPointerAttributeName: string,
+	compositeKeySeparator: string
+}
 
 /** @hidden */
 export type TableRelationshipTypeToAttType<RT> = RT extends TableRelationshipType.ONE_TO_ONE ? (//| TableRelationshipType.ONE_TO_MANY ? (
@@ -148,6 +157,16 @@ export class TableRelationshipViolationError extends Error {
 	}) {
 		super(`Item violates ${params.tableRelationshipType} relationship between ${params.tables.map(table => table.tableName).join(" and ")
 			}: ${JSON.stringify(params.item)}`)
+	}
+}
+
+/**
+ * Error when trying to add a Table relationship which already exists.
+ */
+export class TableRelationshipAlreadyExistsError extends Error {
+	name = "TableRelationshipAlreadyExistsError"
+	constructor() {
+		super("The Table relationship already exists.")
 	}
 }
 

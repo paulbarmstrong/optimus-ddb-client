@@ -2,7 +2,8 @@ import { OPTIMUS_OPERATORS } from "./Constants"
 import { ExpressionBuilder } from "./classes/ExpressionBuilder"
 import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKeyCondition, SortKeyCondition,
 	MergeUnion, TableRelationshipViolationError, 
-	TableRelationshipType} from "./Types"
+	TableRelationshipType,
+	TableRelationship} from "./Types"
 import { ObjectShape, Shape, ShapeToType, UnionShape, s, validateDataShape }  from "shape-tape"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
@@ -177,37 +178,93 @@ export function getItemKeyPointer(table: Table<any, any, any>, item: Record<stri
 	}
 }
 
-export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<string, any>, ItemData>, items: Array<Record<string, any>>) {
+export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<string, any>, ItemData>, items: Array<Record<string, any>>, debug?: boolean) {
 	items.forEach(item => {
 		const itemData = recordedItems.get(item)!
 		const keyChanged: boolean = itemData.table.keyAttributes
 			.filter(keyAttr => itemData.existingItem[keyAttr] !== item[keyAttr]).length > 0
 		itemData.table.relationships.forEach(relationship => {
-			if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
-				const oldPeerItem = items.find(peerItem => {
-					const peerItemData = recordedItems.get(peerItem)!
-					return peerItemData.table === relationship.peerTable && !peerItemData.create &&
-						peerItemData.existingItem[relationship.peerPointerAttributeName] ===
-						getItemKeyPointer(itemData.table, itemData.existingItem, relationship.compositeKeySeparator)
+			const mkError = () => new TableRelationshipViolationError({
+				item: item,
+				tableRelationshipType: relationship.type,
+				tables: [itemData.table, relationship.peerTable]
+			})
+			const oldItemKeyPointer = getItemKeyPointer(itemData.table, itemData.existingItem, relationship.compositeKeySeparator)
+			const latestItemKeyPointer = getItemKeyPointer(itemData.table, item, relationship.compositeKeySeparator)
+
+			const existingPointers = getExistingPointers(relationship, itemData)
+			const latestPointers = getLatestPointers(relationship, itemData, item)
+			const removedPointers: Array<string | number> = existingPointers
+				.filter(existingPointer => !latestPointers.includes(existingPointer))
+			const addedPointers: Array<string | number> = latestPointers
+				.filter(newPointer => !existingPointers.includes(newPointer))
+			if (keyChanged) {
+				existingPointers.forEach(existingPointer => {
+					const peerItem = items.find(peerItem => {
+						const peerItemData = recordedItems.get(peerItem)!
+						return peerItemData.table === relationship.peerTable &&
+							getItemKeyPointer(peerItemData.table, peerItemData.existingItem, relationship.compositeKeySeparator) === existingPointer
+					})
+					if (peerItem === undefined) throw mkError()
+					if (doesPeerPointBack(relationship, recordedItems.get(peerItem)!, peerItem, oldItemKeyPointer)) throw mkError()
 				})
-				const newPeerItem = items.find(peerItem => {
-					const peerItemData = recordedItems.get(peerItem)!
-					return peerItemData.table === relationship.peerTable && !peerItemData.delete &&
-						peerItem[relationship.peerPointerAttributeName] ===
-						getItemKeyPointer(itemData.table, item, relationship.compositeKeySeparator)
-				})
-				const pointerChanged = itemData.existingItem[relationship.pointerAttributeName] !== item[relationship.pointerAttributeName]
-				if (itemData.create || itemData.delete || keyChanged || pointerChanged || oldPeerItem === undefined || newPeerItem === undefined) {
-					if ((oldPeerItem === undefined && !itemData.create)
-						|| (itemData.delete && newPeerItem !== undefined)
-						|| (!itemData.delete && newPeerItem === undefined))
-						throw new TableRelationshipViolationError({
-							item: item,
-							tableRelationshipType: relationship.type,
-							tables: [itemData.table, relationship.peerTable]
-						})
-				}
 			}
+			[...removedPointers, ...addedPointers].forEach(changedPointer => {
+				const added = addedPointers.includes(changedPointer)
+				const peerItem = items.find(peerItem => {
+					const peerItemData = recordedItems.get(peerItem)!
+					return peerItemData.table === relationship.peerTable &&
+						getItemKeyPointer(peerItemData.table, added ? peerItem : peerItemData.existingItem, relationship.compositeKeySeparator) === changedPointer
+				})
+				if (peerItem === undefined) throw mkError()
+				const peerItemData = recordedItems.get(peerItem)!
+				const peerPointsBack = doesPeerPointBack(relationship,peerItemData, peerItem, latestItemKeyPointer)
+				const shouldPeerPointBack = latestPointers.includes(getItemKeyPointer(peerItemData.table, peerItem, relationship.compositeKeySeparator))
+				if (peerPointsBack !== shouldPeerPointBack) throw mkError()
+			})
 		})
 	})
+}
+
+export function getExistingPointers(relationship: TableRelationship, itemData: ItemData): Array<string | number> {
+	if (itemData.create) {
+		return []
+	} else {
+		if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+			return [itemData.existingItem[relationship.pointerAttributeName] as string | number]
+		} else {
+			return itemData.existingItem[relationship.pointerAttributeName] as Array<string | number>
+		}
+	}
+}
+
+export function getLatestPointers(relationship: TableRelationship, itemData: ItemData, item: Record<string, any>): Array<string | number> {
+	if (itemData.delete) {
+		return []
+	} else {
+		if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+			return [item[relationship.pointerAttributeName] as string | number]
+		} else {
+			return item[relationship.pointerAttributeName] as Array<string | number>
+		}
+	}
+}
+
+export function doesPeerPointBack(relationship: TableRelationship, peerItemData: ItemData, peerItem: Record<string, any>,
+		itemKeyPointer: string | number): boolean {
+	if (peerItemData.delete) {
+		return false
+	} else {
+		if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+			return peerItem[relationship.peerPointerAttributeName] === itemKeyPointer
+		} else {
+			return peerItem[relationship.peerPointerAttributeName].includes(itemKeyPointer)
+		}
+	}
+}
+
+export function shallowCloneObjectAndDirectArrays<T extends Record<string, any>>(obj: T): T {
+	return {
+		...(Object.fromEntries(Object.entries(obj).map(entry => Array.isArray(entry) ? [...entry] : entry)))
+	} as T
 }

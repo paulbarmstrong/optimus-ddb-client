@@ -778,3 +778,71 @@ describe("composite key table ONE_TO_ONE relationship", () => {
 		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 })
+
+describe("regular MANY_TO_MANY relationship", () => {
+	const usersTable = new Table({
+		tableName: "Users",
+		itemShape: s.object({
+			id: s.string(),
+			name: s.string(),
+			resourceIds: s.array(s.integer())
+		}),
+		partitionKey: "id"
+	})
+	const resourcesTable = new Table({
+		tableName: "Resources",
+		itemShape: s.object({
+			id: s.integer(),
+			sharedUserIds: s.array(s.string())
+		}),
+		partitionKey: "id"
+	})
+	usersTable.addRelationship({
+		type: TableRelationshipType.MANY_TO_MANY,
+		pointerAttributeName: "resourceIds",
+		peerTable: resourcesTable,
+		peerPointerAttributeName: "sharedUserIds"
+	})
+	test("both created", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([usersTable, resourcesTable], [])
+		const userId = "bbbb"
+		const resourceId = 1111
+		const user = optimus.draftItem({ table: usersTable, item: { id: userId, name: "paul", resourceIds: [resourceId] } })
+		const resource = optimus.draftItem({ table: resourcesTable, item: { id: resourceId, sharedUserIds: [userId] } })
+
+		await optimus.commitItems({ items: [user, resource] })
+	})
+	test("create with peer not having pointer", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([usersTable, resourcesTable], [])
+		const userId = "bbbb"
+		const resourceId = 1111
+		const user = optimus.draftItem({ table: usersTable, item: { id: userId, name: "paul", resourceIds: [resourceId] } })
+		const resource = optimus.draftItem({ table: resourcesTable, item: { id: resourceId, sharedUserIds: [] } })
+
+		await expect(optimus.commitItems({ items: [user, resource] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("orphaned peer after key change", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([usersTable, resourcesTable], [])
+		const user = optimus.draftItem({ table: usersTable, item: { id: "bbbb", name: "paul", resourceIds: [1111] } })
+		const resource = optimus.draftItem({ table: resourcesTable, item: { id: 1111, sharedUserIds: ["bbbb"] } })
+		await optimus.commitItems({ items: [user, resource] })
+		user.id = "cccc"
+
+		await expect(optimus.commitItems({ items: [user, resource] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("create a 2x2", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([usersTable, resourcesTable], [])
+		const userIds = ["aaaa", "bbbb"]
+		const resourceIds = [1111, 2222]
+		const user0 = optimus.draftItem({ table: usersTable, item: { id: userIds[0], name: "paul", resourceIds: resourceIds } })
+		const user1 = optimus.draftItem({ table: usersTable, item: { id: userIds[1], name: "pablo", resourceIds: resourceIds } })
+		const resource0 = optimus.draftItem({ table: resourcesTable, item: { id: resourceIds[0], sharedUserIds: userIds } })
+		const resource1 = optimus.draftItem({ table: resourcesTable, item: { id: resourceIds[1], sharedUserIds: userIds } })
+
+		await expect(optimus.commitItems({ items: [user0] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user0, resource0] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user0, user1] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user0, user1, resource0] })).rejects.toThrow(TableRelationshipViolationError)
+		await optimus.commitItems({ items: [user0, user1, resource0, resource1] })
+	})
+})
