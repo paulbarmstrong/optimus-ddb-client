@@ -107,7 +107,7 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		I1 extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>,
 		P1 extends keyof ShapeToType<I1>,
 		S1 extends keyof ShapeToType<I1>,
-		PeerPointerAttributeName extends { [K in keyof ShapeToType<I1>]: (K extends P1 | S1 ? never : ShapeToType<I1>[K] extends FlipTableRelationshipType<TableRelationshipTypeToAttType<RT>> ? K : never) }[keyof ShapeToType<I1>]
+		PeerPointerAttributeName extends { [K in keyof ShapeToType<I1>]: (K extends P1 | S1 ? never : ShapeToType<I1>[K] extends TableRelationshipTypeToAttType<FlipTableRelationshipType<RT>> ? K : never) }[keyof ShapeToType<I1>]
 	>(params: {
 		/** The nature of the table relationship. */
 		type: RT,

@@ -846,3 +846,71 @@ describe("regular MANY_TO_MANY relationship", () => {
 		await optimus.commitItems({ items: [user0, user1, resource0, resource1] })
 	})
 })
+
+describe("regular ONE_TO_MANY/MANY_TO_ONE relationship", () => {
+	const forumsTable = new Table({
+		tableName: "Forums",
+		itemShape: s.object({
+			id: s.string(),
+			title: s.string(),
+			commentIds: s.array(s.string())
+		}),
+		partitionKey: "id"
+	})
+	const commentsTable = new Table({
+		tableName: "Comments",
+		itemShape: s.object({
+			id: s.string(),
+			forumId: s.string(),
+			text: s.string()
+		}),
+		partitionKey: "id"
+	})
+	forumsTable.addRelationship({
+		type: TableRelationshipType.ONE_TO_MANY,
+		pointerAttributeName: "commentIds",
+		peerTable: commentsTable,
+		peerPointerAttributeName: "forumId"
+	})
+	test("create comment without forum pointing to it", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([forumsTable, commentsTable], [])
+		const forum = optimus.draftItem({ table: forumsTable, item: { id: "bbbb", title: "forum 1", commentIds: [] } })
+		const comment = optimus.draftItem({ table: commentsTable, item: { id: "1111", forumId: forum.id, text: "hello" } })
+
+		await expect(optimus.commitItems({ items: [forum, comment] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+	test("create forum without comment pointing to it", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([forumsTable, commentsTable], [])
+		const comment = optimus.draftItem({ table: commentsTable, item: { id: "1111", forumId: "aaaa", text: "hello" } })
+		const forum = optimus.draftItem({ table: forumsTable, item: { id: "bbbb", title: "forum 1", commentIds: [comment.id] } })
+
+		await expect(optimus.commitItems({ items: [forum, comment] })).rejects.toThrow(TableRelationshipViolationError)
+	})
+
+	test("multiple comments to a forum", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([forumsTable, commentsTable], [])
+		const forum = optimus.draftItem({ table: forumsTable, item: { id: "bbbb", title: "forum 1", commentIds: new Array<string>() } })
+		await optimus.commitItems({ items: [forum] })
+
+		const comment0 = optimus.draftItem({ table: commentsTable, item: { id: "0000", forumId: forum.id, text: "hello" } })
+		forum.commentIds.push(comment0.id)
+		await optimus.commitItems({ items: [forum, comment0] })
+
+		const comment1 = optimus.draftItem({ table: commentsTable, item: { id: "1111", forumId: forum.id, text: "hi" } })
+		forum.commentIds.push(comment1.id)
+		await optimus.commitItems({ items: [forum, comment0, comment1] })
+
+		const comment2 = optimus.draftItem({ table: commentsTable, item: { id: "2222", forumId: forum.id, text: "hey" } })
+		forum.commentIds.push(comment2.id)
+		await optimus.commitItems({ items: [forum, comment2] })
+
+		optimus.markItemForDeletion({ item: comment1 })
+		await expect(optimus.commitItems({ items: [comment1] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [forum, comment1] })).rejects.toThrow(TableRelationshipViolationError)
+
+		forum.commentIds.filter(commentId => commentId !== comment1.id)
+		await expect(optimus.commitItems({ items: [comment1] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [forum] })).rejects.toThrow(TableRelationshipViolationError)
+		await optimus.commitItems({ items: [forum, comment1] })
+	})
+})

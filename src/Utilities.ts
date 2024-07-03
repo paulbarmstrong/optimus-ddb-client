@@ -161,8 +161,8 @@ export function isGsi(index: Table<any,any,any> | Gsi<any,any,any>): boolean {
 }
 
 export function flipRelationshipType(relationshipType: TableRelationshipType): TableRelationshipType {
-	//if (relationshipType === TableRelationshipType.ONE_TO_MANY) return TableRelationshipType.MANY_TO_ONE
-	//if (relationshipType === TableRelationshipType.MANY_TO_ONE) return TableRelationshipType.ONE_TO_MANY
+	if (relationshipType === TableRelationshipType.ONE_TO_MANY) return TableRelationshipType.MANY_TO_ONE
+	if (relationshipType === TableRelationshipType.MANY_TO_ONE) return TableRelationshipType.ONE_TO_MANY
 	return relationshipType
 }
 
@@ -178,7 +178,7 @@ export function getItemKeyPointer(table: Table<any, any, any>, item: Record<stri
 	}
 }
 
-export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<string, any>, ItemData>, items: Array<Record<string, any>>, debug?: boolean) {
+export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<string, any>, ItemData>, items: Array<Record<string, any>>) {
 	items.forEach(item => {
 		const itemData = recordedItems.get(item)!
 		const keyChanged: boolean = itemData.table.keyAttributes
@@ -219,7 +219,8 @@ export function validateRelationshipsOnCommit(recordedItems: WeakMap<Record<stri
 				if (peerItem === undefined) throw mkError()
 				const peerItemData = recordedItems.get(peerItem)!
 				const peerPointsBack = doesPeerPointBack(relationship,peerItemData, peerItem, latestItemKeyPointer)
-				const shouldPeerPointBack = latestPointers.includes(getItemKeyPointer(peerItemData.table, peerItem, relationship.compositeKeySeparator))
+				const shouldPeerPointBack = latestPointers.includes(getItemKeyPointer(peerItemData.table, peerItem,
+					relationship.compositeKeySeparator))
 				if (peerPointsBack !== shouldPeerPointBack) throw mkError()
 			})
 		})
@@ -230,7 +231,7 @@ export function getExistingPointers(relationship: TableRelationship, itemData: I
 	if (itemData.create) {
 		return []
 	} else {
-		if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+		if ([TableRelationshipType.ONE_TO_ONE, TableRelationshipType.MANY_TO_ONE].includes(relationship.type)) {
 			return [itemData.existingItem[relationship.pointerAttributeName] as string | number]
 		} else {
 			return itemData.existingItem[relationship.pointerAttributeName] as Array<string | number>
@@ -242,7 +243,7 @@ export function getLatestPointers(relationship: TableRelationship, itemData: Ite
 	if (itemData.delete) {
 		return []
 	} else {
-		if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+		if ([TableRelationshipType.ONE_TO_ONE, TableRelationshipType.MANY_TO_ONE].includes(relationship.type)) {
 			return [item[relationship.pointerAttributeName] as string | number]
 		} else {
 			return item[relationship.pointerAttributeName] as Array<string | number>
@@ -255,7 +256,7 @@ export function doesPeerPointBack(relationship: TableRelationship, peerItemData:
 	if (peerItemData.delete) {
 		return false
 	} else {
-		if (relationship.type === TableRelationshipType.ONE_TO_ONE) {
+		if ([TableRelationshipType.ONE_TO_ONE, TableRelationshipType.ONE_TO_MANY].includes(relationship.type)) {
 			return peerItem[relationship.peerPointerAttributeName] === itemKeyPointer
 		} else {
 			return peerItem[relationship.peerPointerAttributeName].includes(itemKeyPointer)

@@ -48,15 +48,15 @@ export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exi
 export enum TableRelationshipType {
 	/** There is a 1:1 mapping between each item in the first Table and the second Table. */
 	ONE_TO_ONE = "ONE_TO_ONE",
-	//ONE_TO_MANY = "ONE_TO_MANY",
-	//MANY_TO_ONE = "MANY_TO_ONE",
+	ONE_TO_MANY = "ONE_TO_MANY",
+	MANY_TO_ONE = "MANY_TO_ONE",
 	MANY_TO_MANY = "MANY_TO_MANY"
 }
 
 /** @hidden */
 export type FlipTableRelationshipType<RT> =
-	//RT extends TableRelationshipType.ONE_TO_MANY ? TableRelationshipType.MANY_TO_ONE:
-	//RT extends TableRelationshipType.MANY_TO_ONE ? TableRelationshipType.ONE_TO_MANY:
+	RT extends TableRelationshipType.ONE_TO_MANY ? TableRelationshipType.MANY_TO_ONE :
+	RT extends TableRelationshipType.MANY_TO_ONE ? TableRelationshipType.ONE_TO_MANY :
 	RT
 
 /** @hidden */
@@ -69,7 +69,7 @@ export type TableRelationship = {
 }
 
 /** @hidden */
-export type TableRelationshipTypeToAttType<RT> = RT extends TableRelationshipType.ONE_TO_ONE ? (//| TableRelationshipType.ONE_TO_MANY ? (
+export type TableRelationshipTypeToAttType<RT> = RT extends (TableRelationshipType.ONE_TO_ONE | TableRelationshipType.MANY_TO_ONE) ? (
 	string | number
 ) : (
 	Array<string | number>
