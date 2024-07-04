@@ -1,5 +1,5 @@
 import { ExpressionBuilder } from "../src/classes/ExpressionBuilder"
-import { getDynamoDbConditionExpressionString } from "../src/Utilities"
+import { filterUnique, getDynamoDbConditionExpressionString } from "../src/Utilities"
 
 describe("getDynamoDbConditionExpressionString", () => {
 	test("exists", () => {
@@ -75,4 +75,8 @@ describe("getDynamoDbConditionExpressionString", () => {
 			expect(builder.attributeValues).toStrictEqual({ ":A1701653045499_0": 1701653045499, ":A1701653055480_0": 1701653055480 })
 		})
 	})
+})
+
+test("filterUnique", () => {
+	expect(filterUnique([1,3,4,3], (a,b) => a === b)).toStrictEqual([1,3,4])
 })

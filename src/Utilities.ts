@@ -166,7 +166,7 @@ export function flipRelationshipType(relationshipType: TableRelationshipType): T
 	return relationshipType
 }
 
-export function getKeyAttributesFromAttributes(table: Table<any, any, any>, item: Record<string, any>): Record<string, any> {
+export function getItemKey(table: Table<any, any, any>, item: Record<string, any>): Record<string, any> {
 	return Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]]))
 }
 
@@ -268,4 +268,60 @@ export function shallowCloneObjectAndDirectArrays<T extends Record<string, any>>
 	return {
 		...(Object.fromEntries(Object.entries(obj).map(entry => Array.isArray(entry) ? [...entry] : entry)))
 	} as T
+}
+
+export function optimusCommitItemsToPerKeyItemChanges(recordedItems: WeakMap<Record<string, any>, ItemData>,
+		items: Array<Record<string, any>>): Array<{
+	table: Table<any,any,any>,
+	key: Record<string, any>,
+	existingDdbItemVersion: number | undefined,
+	oldItem: Record<string, any> | undefined,
+	newItem: Record<string, any> | undefined
+}> {
+	const existingDdbItemVersions = items.map(item => {
+		const itemData = recordedItems.get(item)!
+		return {
+			table: itemData.table,
+			key: getItemKey(itemData.table, itemData.existingItem),
+			version: itemData.version
+		}
+	})
+	const existingItems = items.flatMap(item => {
+		const itemData = recordedItems.get(item)!
+		return itemData.create ? [] : [{ table: itemData.table, item: itemData.existingItem }]
+	})
+	const latestItems = items.flatMap(item => {
+		const itemData = recordedItems.get(item)!
+		return itemData.delete ? [] : [{ table: itemData.table, item: item }]
+	})
+	const allKeyProfiles: Array<{
+		table: Table<any,any,any>
+		key: Record<string, any>
+	}> = filterUnique(
+		[...existingItems, ...latestItems].map(itemProfile => ({ table: itemProfile.table, key: getItemKey(itemProfile.table, itemProfile.item) })),
+		(a, b) => a.table === b.table && itemKeyEq(a.table, a.key, b.key)
+	)
+	return allKeyProfiles.map(keyProfile => ({
+		table: keyProfile.table,
+		key: keyProfile.key,
+		existingDdbItemVersion: existingDdbItemVersions
+			.find(entry => entry.table == keyProfile.table && itemKeyEq(keyProfile.table, keyProfile.key, entry.key))
+			?.version,
+		oldItem: existingItems.find(existingItem => existingItem.table === keyProfile.table && itemKeyEq(keyProfile.table, keyProfile.key, existingItem.item))?.item,
+		newItem: latestItems.find(latestItem => latestItem.table === keyProfile.table && itemKeyEq(keyProfile.table, keyProfile.key, latestItem.item))?.item
+	}))
+}
+
+export function filterUnique<T>(array: Array<T>, eq: (a: T, b: T) => boolean): Array<T> {
+	const uniqued: Array<T> = []
+	array.forEach(a => {
+		if (uniqued.find(b => eq(a, b)) === undefined) {
+			uniqued.push(a)
+		}
+	})
+	return uniqued
+}
+
+export function itemKeyEq(table: Table<any, any, any>, a: Record<string, any>, b: Record<string, any>): boolean {
+	return table.keyAttributes.filter(keyAttrName => a[keyAttrName] !== b[keyAttrName]).length === 0
 }

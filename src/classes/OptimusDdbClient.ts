@@ -4,8 +4,8 @@ import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteComma
 import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-tape"
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
-import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getKeyAttributesFromAttributes,
-	getLastEvaluatedKeyShape, isGsi, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit } from "../Utilities"
+import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable,
+	getLastEvaluatedKeyShape, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit } from "../Utilities"
 import { ExpressionBuilder } from "./ExpressionBuilder"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -319,63 +319,47 @@ export class OptimusDdbClient {
 			})
 		})
 		validateRelationshipsOnCommit(this.#recordedItems, params.items)
-		const transactItems = params.items.map(item => {
-			const itemData = this.#recordedItems.get(item)!
-			const keyChanged: boolean = itemData.table.keyAttributes
-				.filter(keyAttr => itemData.existingItem[keyAttr] !== item[keyAttr]).length > 0
-			
-			if (itemData.delete) {
+		const perKeyItemChanges = optimusCommitItemsToPerKeyItemChanges(this.#recordedItems, params.items)
+		const transactItems = perKeyItemChanges.map(itemChange => {
+			if (itemChange.oldItem !== undefined && itemChange.newItem !== undefined) {
+				return [{
+					Update: {
+						TableName: itemChange.table.tableName,
+						Key: itemChange.key,
+						...(this.#getUpdateDynamoDbExpression(itemChange.table, itemChange.newItem, itemChange.existingDdbItemVersion!))
+					}
+				}]
+			} else if (itemChange.oldItem === undefined && itemChange.newItem !== undefined) {
+				return [{
+					Put: {
+						TableName: itemChange.table.tableName,
+						Item: { ...itemChange.newItem, [itemChange.table.versionAttribute]: 0 },
+						...getDynamoDbExpression({
+							conditionConditions: itemChange.table.sortKey !== undefined ? (
+								[
+									[itemChange.table.partitionKey, "doesn't exist"],
+									[itemChange.table.sortKey, "doesn't exist"]
+								]
+							) : (
+								[[itemChange.table.partitionKey, "doesn't exist"]]
+							)
+						})
+					}
+				}]
+			} else if (itemChange.oldItem !== undefined && itemChange.newItem === undefined) {
 				return [{
 					Delete: {
-						TableName: itemData.table.tableName,
-						Key: getKeyAttributesFromAttributes(itemData.table, itemData.existingItem),
+						TableName: itemChange.table.tableName,
+						Key: itemChange.key,
 						...getDynamoDbExpression({
 							conditionConditions: [
-								[itemData.table.versionAttribute, "=", itemData.version]
+								[itemChange.table.versionAttribute, "=", itemChange.existingDdbItemVersion!]
 							]
 						})
 					}
 				}]
-			} else if (itemData.create) {
-				return [{
-					Put: {
-						TableName: itemData.table.tableName,
-						Item: { ...item, [itemData.table.versionAttribute]: itemData.version },
-						...getDynamoDbExpression({
-							conditionConditions: [[itemData.table.partitionKey, "doesn't exist"]]
-						})
-					}
-				}]
-			} else if (keyChanged) {
-				return [
-					{
-						Put: {
-							TableName: itemData.table.tableName,
-							Item: { ...item, [itemData.table.versionAttribute]: itemData.version+1 },
-							...getDynamoDbExpression({
-								conditionConditions: [[itemData.table.partitionKey, "doesn't exist"]]
-							})
-						}
-					}, {
-						Delete: {
-							TableName: itemData.table.tableName,
-							Key: getKeyAttributesFromAttributes(itemData.table, itemData.existingItem),
-							...getDynamoDbExpression({
-								conditionConditions: [
-									[itemData.table.versionAttribute, "=", itemData.version]
-								]
-							})
-						}
-					}
-				]
 			} else {
-				return [{
-					Update: {
-						TableName: itemData.table.tableName,
-						Key: getKeyAttributesFromAttributes(itemData.table, itemData.existingItem),
-						...this.#getUpdateDynamoDbExpression(item, itemData)
-					}
-				}]
+				return []
 			}
 		}).flat()
 		try {
@@ -401,10 +385,11 @@ export class OptimusDdbClient {
 		}
 		params.items.forEach(item => {
 			const itemData = this.#recordedItems.get(item)!
+			const keyChanged: boolean = !itemKeyEq(itemData.table, item, itemData.existingItem)
 			if (itemData.create) {
 				itemData.create = false
 			} else {
-				itemData.version = itemData.version + 1
+				itemData.version = keyChanged ? 0 : itemData.version + 1
 			}
 			itemData.existingItem = shallowCloneObjectAndDirectArrays(item)
 			if (itemData.delete) this.#recordedItems.delete(item)
@@ -450,20 +435,20 @@ export class OptimusDdbClient {
 
 	/** @hidden */
 	#getUpdateDynamoDbExpression<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>>
-			(item: ShapeToType<I>, itemData: ItemData) {
+			(table: Table<any, any, any>, item: ShapeToType<I>, existingVersion: number) {
 		const builder: ExpressionBuilder = new ExpressionBuilder()
-		const set = itemData.table.attributes
-			.filter(key => item[key as string] !== undefined && !itemData.table.keyAttributes.includes(key as string))
+		const set = table.attributes
+			.filter(key => item[key as string] !== undefined && !table.keyAttributes.includes(key as string))
 			.map(key => `${builder.addName(key as string)} = ${builder.addValue(item[key as string])}`)
-			.concat(`${builder.addName(itemData.table.versionAttribute)} = ${builder.addValue(itemData.version+1)}`)
+			.concat(`${builder.addName(table.versionAttribute)} = ${builder.addValue(existingVersion+1)}`)
 			.join(", ")
-		const remove = itemData.table.attributes
-			.filter(key => item[key as string] === undefined && !itemData.table.keyAttributes.includes(key as string))
+		const remove = table.attributes
+			.filter(key => item[key as string] === undefined && !table.keyAttributes.includes(key as string))
 			.map(key => builder.addName(key as string))
 			.join(", ")
 		return {
 			UpdateExpression: remove.length > 0 ? `SET ${set} REMOVE ${remove}` : `SET ${set}`,
-			ConditionExpression: `(${builder.addName(itemData.table.versionAttribute)} = ${builder.addValue(itemData.version)})`,
+			ConditionExpression: `(${builder.addName(table.versionAttribute)} = ${builder.addValue(existingVersion)})`,
 			ExpressionAttributeNames: builder.attributeNames,
 			ExpressionAttributeValues: builder.attributeValues
 		}
