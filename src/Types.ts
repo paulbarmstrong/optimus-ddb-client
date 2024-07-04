@@ -177,3 +177,12 @@ export class ItemWithoutVersionError extends Error {
 		super(message)
 	}
 }
+
+/** @hidden */
+export type PerKeyItemChange = {
+	table: Table<any,any,any>,
+	key: Record<string, any>,
+	existingDdbItemVersion: number | undefined,
+	oldItem: Record<string, any> | undefined,
+	newItem: Record<string, any> | undefined
+}

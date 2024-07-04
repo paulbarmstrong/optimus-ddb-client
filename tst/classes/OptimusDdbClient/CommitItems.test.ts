@@ -522,7 +522,6 @@ test("item tries to get committed with extra attribute", async () => {
 	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
 })
 
-/*
 describe("regular ONE_TO_ONE relationship", () => {
 	const aliasesTable = new Table({
 		tableName: "Aliases",
@@ -681,7 +680,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 			TableName: "Users",
 			Key: { id: "cccc" },
 			ConsistentRead: true
-		}))).Item).toStrictEqual({ id: "cccc", alias: "paul", version: 1 })
+		}))).Item).toStrictEqual({ id: "cccc", alias: "paul", version: 0 })
 	})
 
 	test("creating and switching peers", async () => {
@@ -927,9 +926,9 @@ describe("regular ONE_TO_MANY/MANY_TO_ONE relationship", () => {
 		await expect(optimus.commitItems({ items: [comment1] })).rejects.toThrow(TableRelationshipViolationError)
 		await expect(optimus.commitItems({ items: [forum, comment1] })).rejects.toThrow(TableRelationshipViolationError)
 
-		forum.commentIds.filter(commentId => commentId !== comment1.id)
+		forum.commentIds = forum.commentIds.filter(commentId => commentId !== comment1.id)
 		await expect(optimus.commitItems({ items: [comment1] })).rejects.toThrow(TableRelationshipViolationError)
 		await expect(optimus.commitItems({ items: [forum] })).rejects.toThrow(TableRelationshipViolationError)
 		await optimus.commitItems({ items: [forum, comment1] })
 	})
-})*/
+})

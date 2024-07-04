@@ -5,8 +5,7 @@ import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-t
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
 import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable,
-	getLastEvaluatedKeyShape, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit } from "../Utilities"
-import { ExpressionBuilder } from "./ExpressionBuilder"
+	getLastEvaluatedKeyShape, getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit } from "../Utilities"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
 import { SortKeyCondition, UnprocessedKeysError } from "../Types"
@@ -318,15 +317,15 @@ export class OptimusDdbClient {
 				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
 			})
 		})
-		validateRelationshipsOnCommit(this.#recordedItems, params.items)
 		const perKeyItemChanges = optimusCommitItemsToPerKeyItemChanges(this.#recordedItems, params.items)
+		validateRelationshipsOnCommit(perKeyItemChanges)
 		const transactItems = perKeyItemChanges.map(itemChange => {
 			if (itemChange.oldItem !== undefined && itemChange.newItem !== undefined) {
 				return [{
 					Update: {
 						TableName: itemChange.table.tableName,
 						Key: itemChange.key,
-						...(this.#getUpdateDynamoDbExpression(itemChange.table, itemChange.newItem, itemChange.existingDdbItemVersion!))
+						...(getUpdateDynamoDbExpression(itemChange.table, itemChange.newItem, itemChange.existingDdbItemVersion!))
 					}
 				}]
 			} else if (itemChange.oldItem === undefined && itemChange.newItem !== undefined) {
@@ -431,27 +430,6 @@ export class OptimusDdbClient {
 			create: create
 		})
 		return validatedItem
-	}
-
-	/** @hidden */
-	#getUpdateDynamoDbExpression<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>>
-			(table: Table<any, any, any>, item: ShapeToType<I>, existingVersion: number) {
-		const builder: ExpressionBuilder = new ExpressionBuilder()
-		const set = table.attributes
-			.filter(key => item[key as string] !== undefined && !table.keyAttributes.includes(key as string))
-			.map(key => `${builder.addName(key as string)} = ${builder.addValue(item[key as string])}`)
-			.concat(`${builder.addName(table.versionAttribute)} = ${builder.addValue(existingVersion+1)}`)
-			.join(", ")
-		const remove = table.attributes
-			.filter(key => item[key as string] === undefined && !table.keyAttributes.includes(key as string))
-			.map(key => builder.addName(key as string))
-			.join(", ")
-		return {
-			UpdateExpression: remove.length > 0 ? `SET ${set} REMOVE ${remove}` : `SET ${set}`,
-			ConditionExpression: `(${builder.addName(table.versionAttribute)} = ${builder.addValue(existingVersion)})`,
-			ExpressionAttributeNames: builder.attributeNames,
-			ExpressionAttributeValues: builder.attributeValues
-		}
 	}
 
 	/** @hidden */
