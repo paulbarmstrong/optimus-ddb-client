@@ -49,13 +49,13 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 ### Properties
 
-- [attributes](Table.md#attributes)
+- [attributeNames](Table.md#attributenames)
 - [itemShape](Table.md#itemshape)
-- [keyAttributes](Table.md#keyattributes)
+- [keyAttributeNames](Table.md#keyattributenames)
 - [partitionKey](Table.md#partitionkey)
 - [sortKey](Table.md#sortkey)
 - [tableName](Table.md#tablename)
-- [versionAttribute](Table.md#versionattribute)
+- [versionAttributeName](Table.md#versionattributename)
 
 ### Accessors
 
@@ -96,19 +96,19 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 #### Defined in
 
-[src/classes/Table.ts:65](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L65)
+[src/classes/Table.ts:60](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L60)
 
 ## Properties
 
-### attributes
+### attributeNames
 
-• `Readonly` **attributes**: `string`[]
+• `Readonly` **attributeNames**: `string`[]
 
 The names of all of the item attributes (except for the version attribute).
 
 #### Defined in
 
-[src/classes/Table.ts:57](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L57)
+[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L52)
 
 ___
 
@@ -120,20 +120,20 @@ Shape representing the structure of items in the table. Please see the Table cla
 
 #### Defined in
 
-[src/classes/Table.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L51)
+[src/classes/Table.ts:46](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L46)
 
 ___
 
-### keyAttributes
+### keyAttributeNames
 
-• `Readonly` **keyAttributes**: `string`[]
+• `Readonly` **keyAttributeNames**: `string`[]
 
 The names of all of the key attributes. It will contain either 1 or 2 items depending on
 if the table has a sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:62](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L62)
+[src/classes/Table.ts:57](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L57)
 
 ___
 
@@ -145,7 +145,7 @@ The name of the DynamoDB table's partition key.
 
 #### Defined in
 
-[src/classes/Table.ts:53](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L53)
+[src/classes/Table.ts:48](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L48)
 
 ___
 
@@ -157,7 +157,7 @@ The name of the DynamoDB table's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:55](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L55)
+[src/classes/Table.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L50)
 
 ___
 
@@ -169,36 +169,36 @@ The name of the DynamoDB table.
 
 #### Defined in
 
-[src/classes/Table.ts:49](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L49)
+[src/classes/Table.ts:44](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L44)
 
 ___
 
-### versionAttribute
+### versionAttributeName
 
-• `Readonly` **versionAttribute**: `string`
+• `Readonly` **versionAttributeName**: `string`
 
 The name of the version attribute used for optimistic locking.
 
 #### Defined in
 
-[src/classes/Table.ts:64](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L64)
+[src/classes/Table.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L59)
 
 ## Accessors
 
 ### relationships
 
-• `get` **relationships**(): \{ `compositeKeySeparator`: `string` ; `peerPointerAttributeName`: `string` ; `peerTable`: [`Table`](Table.md)\<`any`, `any`, `any`\> ; `pointerAttributeName`: `string` ; `type`: [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one)  }[]
+• `get` **relationships**(): `TableRelationship`[]
 
 The relationships that are applied to the Table. For each relationship, the peer Table has a
 corresponding inverted relationship to this Table.
 
 #### Returns
 
-\{ `compositeKeySeparator`: `string` ; `peerPointerAttributeName`: `string` ; `peerTable`: [`Table`](Table.md)\<`any`, `any`, `any`\> ; `pointerAttributeName`: `string` ; `type`: [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one)  }[]
+`TableRelationship`[]
 
 #### Defined in
 
-[src/classes/Table.ts:154](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L154)
+[src/classes/Table.ts:151](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L151)
 
 ## Methods
 
@@ -212,7 +212,7 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 
 | Name | Type |
 | :------ | :------ |
-| `RT` | extends [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one) |
+| `RT` | extends [`TableRelationshipType`](../enums/TableRelationshipType.md) |
 | `PointerAttributeName` | extends `string` \| `number` \| `symbol` |
 | `I1` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
 | `P1` | extends `string` \| `number` \| `symbol` |
@@ -236,4 +236,4 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 
 #### Defined in
 
-[src/classes/Table.ts:110](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L110)
+[src/classes/Table.ts:105](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L105)

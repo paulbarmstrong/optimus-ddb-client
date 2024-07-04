@@ -50,7 +50,7 @@ and those are mentioned on each function documentation.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L41)
+[src/classes/OptimusDdbClient.ts:40](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L40)
 
 ## Methods
 
@@ -83,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:305](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L305)
+[src/classes/OptimusDdbClient.ts:303](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L303)
 
 ___
 
@@ -123,7 +123,7 @@ ItemShapeValidationError if the item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:60](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L60)
+[src/classes/OptimusDdbClient.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L59)
 
 ___
 
@@ -169,7 +169,7 @@ ItemShapeValidationError if the item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:92](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L92)
+[src/classes/OptimusDdbClient.ts:91](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L91)
 
 ___
 
@@ -194,7 +194,7 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:419](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L419)
+[src/classes/OptimusDdbClient.ts:402](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L402)
 
 ___
 
@@ -245,7 +245,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:138](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L138)
+[src/classes/OptimusDdbClient.ts:137](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L137)
 
 ___
 
@@ -269,7 +269,7 @@ deleted in DynamoDB once it is included in the `items` of a call to `commitItems
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:74](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L74)
+[src/classes/OptimusDdbClient.ts:73](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L73)
 
 ___
 
@@ -332,7 +332,7 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:209](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L209)
+[src/classes/OptimusDdbClient.ts:207](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L207)
 
 ___
 
@@ -392,4 +392,4 @@ ItemShapeValidationError if an item does not match the Table's `itemShape`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:267](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L267)
+[src/classes/OptimusDdbClient.ts:265](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L265)

@@ -41,7 +41,7 @@ Error for when OptimusDdbClient `commitItems`' items violate a Table relationshi
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.item` | `Record`\<`string`, `any`\> | Item triggering the Table relationship violation. |
-| `params.tableRelationshipType` | [`ONE_TO_ONE`](../enums/TableRelationshipType.md#one_to_one) | The type of the TableRelationship. |
+| `params.tableRelationshipType` | [`TableRelationshipType`](../enums/TableRelationshipType.md) | The type of the TableRelationship. |
 | `params.tables` | [[`Table`](Table.md)\<`any`, `any`, `any`\>, [`Table`](Table.md)\<`any`, `any`, `any`\>] | The tables of the TableRelationship. |
 
 #### Returns
@@ -54,7 +54,7 @@ Error.constructor
 
 #### Defined in
 
-[src/Types.ts:141](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L141)
+[src/Types.ts:150](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L150)
 
 ## Properties
 
@@ -96,7 +96,7 @@ Error.name
 
 #### Defined in
 
-[src/Types.ts:140](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L140)
+[src/Types.ts:149](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L149)
 
 ___
 
