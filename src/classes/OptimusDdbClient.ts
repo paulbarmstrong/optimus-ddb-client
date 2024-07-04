@@ -166,9 +166,8 @@ export class OptimusDdbClient {
 			unfinishedKeys.push(...unproccessedKeys)
 		}
 		if (finishedItems.length !== params.keys.length) {
-			const unfoundItemKeys = params.keys.filter(key => !finishedItems.find(item => {
-				return Object.entries(key).filter(keyAttr => item[keyAttr[0]] !== keyAttr[1]).length === 0
-			}))
+			const unfoundItemKeys = params.keys
+				.filter(key => !finishedItems.find(item => itemKeyEq(params.table, key, item)))
 			const error = params.itemNotFoundErrorOverride !== undefined ? (
 				params.itemNotFoundErrorOverride(new ItemNotFoundError({ itemKeys: unfoundItemKeys }))
 			) : (
@@ -179,7 +178,7 @@ export class OptimusDdbClient {
 			}
 		}
 		const finishedItemsMap = new Map(finishedItems.map(item => [
-			params.keys.find(key => params.table.keyAttributes.filter(keyAttr => (key as any)[keyAttr] !== item[keyAttr]).length === 0)!,
+			params.keys.find(key => itemKeyEq(params.table, key, item))!,
 			item
 		]))
 		return Array.from(params.keys.map(key => finishedItemsMap.get(key)))
@@ -332,7 +331,7 @@ export class OptimusDdbClient {
 				return [{
 					Put: {
 						TableName: itemChange.table.tableName,
-						Item: { ...itemChange.newItem, [itemChange.table.versionAttribute]: 0 },
+						Item: { ...itemChange.newItem, [itemChange.table.versionAttributeName]: 0 },
 						...getDynamoDbExpression({
 							conditionConditions: itemChange.table.sortKey !== undefined ? (
 								[
@@ -352,7 +351,7 @@ export class OptimusDdbClient {
 						Key: itemChange.key,
 						...getDynamoDbExpression({
 							conditionConditions: [
-								[itemChange.table.versionAttribute, "=", itemChange.existingDdbItemVersion!]
+								[itemChange.table.versionAttributeName, "=", itemChange.existingDdbItemVersion!]
 							]
 						})
 					}
@@ -413,10 +412,10 @@ export class OptimusDdbClient {
 	/** @hidden */
 	#recordAndStripItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, 
 			S extends keyof ShapeToType<I>>(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
-		if (!create && !Number.isInteger(item[table.versionAttribute]))
-			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttribute}": ${JSON.stringify(item)}`)
-		const version = create ? 0 : item[table.versionAttribute]
-		delete item[table.versionAttribute]
+		if (!create && !Number.isInteger(item[table.versionAttributeName]))
+			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttributeName}": ${JSON.stringify(item)}`)
+		const version = create ? 0 : item[table.versionAttributeName]
+		delete item[table.versionAttributeName]
 		const validatedItem: ShapeToType<typeof table.itemShape> = validateDataShape({
 			data: item,
 			shape: table.itemShape,
@@ -465,7 +464,7 @@ export class OptimusDdbClient {
 					}
 				}
 			})
-			const incompleteItemKeys: any = incompleteItems.map(item => Object.fromEntries(Object.entries(item).filter(attr => table.keyAttributes.includes(attr[0]))))
+			const incompleteItemKeys: any = incompleteItems.map(item => Object.fromEntries(Object.entries(item).filter(attr => table.keyAttributeNames.includes(attr[0]))))
 			items.push(...(await this.getItems({ table: table, keys: incompleteItemKeys, itemNotFoundErrorOverride: () => undefined })))
 		}
 		return [

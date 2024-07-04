@@ -1,7 +1,8 @@
 import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
 import { flipRelationshipType } from "../Utilities"
 import { DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR } from "../Constants"
-import { FlipTableRelationshipType, TableRelationship, TableRelationshipAlreadyExistsError, TableRelationshipType, TableRelationshipTypeToAttType } from "../Types"
+import { FlipTableRelationshipType, TableRelationship, TableRelationshipAlreadyExistsError, TableRelationshipType,
+	TableRelationshipTypeToAttType } from "../Types"
 
 /**
  * Table represents a DynamoDB Table. It can be created once and then provided to OptimusDdbClient
@@ -48,14 +49,14 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 	/** The name of the DynamoDB table's sort key or `undefined` if it has no sort key. */
 	readonly sortKey?: S
 	/** The names of all of the item attributes (except for the version attribute). */
-	readonly attributes: Array<string>
+	readonly attributeNames: Array<string>
 	/** 
 	 * The names of all of the key attributes. It will contain either 1 or 2 items depending on
 	 * if the table has a sort key.
 	 */
-	readonly keyAttributes: Array<string>
+	readonly keyAttributeNames: Array<string>
 	/** The name of the version attribute used for optimistic locking. */
-	readonly versionAttribute: string
+	readonly versionAttributeName: string
 	constructor(params: {
 		/** The TableName of the DynamoDB table. */
 		tableName: string,
@@ -77,22 +78,22 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		this.partitionKey = params.partitionKey
 		this.sortKey = params.sortKey
 		if ((params.itemShape as ObjectShape<any,any>).propertyShapes !== undefined) {
-			this.attributes = Object.keys((params.itemShape as ObjectShape<any,any>).propertyShapes)
+			this.attributeNames = Object.keys((params.itemShape as ObjectShape<any,any>).propertyShapes)
 		} else {
-			const attributesNotUnique = (params.itemShape as UnionShape<Array<ObjectShape<any,any>>>)
+			const attributeNamesNotUnique = (params.itemShape as UnionShape<Array<ObjectShape<any,any>>>)
 				.memberShapes.map(x => Object.keys(x.propertyShapes)).flat()
-			this.attributes = [...new Set(attributesNotUnique)]
+			this.attributeNames = [...new Set(attributeNamesNotUnique)]
 		}
-		this.keyAttributes = [
+		this.keyAttributeNames = [
 			this.partitionKey as string,
 			...(this.sortKey !== undefined ? [this.sortKey as string] : [])
 		]
-		this.versionAttribute = params.versionAttribute !== undefined ? params.versionAttribute.toString() : "version"
-		this.attributes.forEach(attributeName => {
-			if (attributeName === this.versionAttribute) {
+		this.versionAttributeName = params.versionAttribute !== undefined ? params.versionAttribute.toString() : "version"
+		this.attributeNames.forEach(attributeName => {
+			if (attributeName === this.versionAttributeName) {
 				throw new Error(`${this.tableName
 					} table's item shape includes reserved version attribute "${
-					this.versionAttribute.toString()}".`
+					this.versionAttributeName.toString()}".`
 				)
 			}
 		})

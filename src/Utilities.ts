@@ -18,18 +18,18 @@ export function plurality(num: number) {
 export function getUpdateDynamoDbExpression<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>>
 			(table: Table<any, any, any>, item: ShapeToType<I>, existingVersion: number) {
 	const builder: ExpressionBuilder = new ExpressionBuilder()
-	const set = table.attributes
-		.filter(key => item[key as string] !== undefined && !table.keyAttributes.includes(key as string))
+	const set = table.attributeNames
+		.filter(key => item[key as string] !== undefined && !table.keyAttributeNames.includes(key as string))
 		.map(key => `${builder.addName(key as string)} = ${builder.addValue(item[key as string])}`)
-		.concat(`${builder.addName(table.versionAttribute)} = ${builder.addValue(existingVersion+1)}`)
+		.concat(`${builder.addName(table.versionAttributeName)} = ${builder.addValue(existingVersion+1)}`)
 		.join(", ")
-	const remove = table.attributes
-		.filter(key => item[key as string] === undefined && !table.keyAttributes.includes(key as string))
+	const remove = table.attributeNames
+		.filter(key => item[key as string] === undefined && !table.keyAttributeNames.includes(key as string))
 		.map(key => builder.addName(key as string))
 		.join(", ")
 	return {
 		UpdateExpression: remove.length > 0 ? `SET ${set} REMOVE ${remove}` : `SET ${set}`,
-		ConditionExpression: `(${builder.addName(table.versionAttribute)} = ${builder.addValue(existingVersion)})`,
+		ConditionExpression: `(${builder.addName(table.versionAttributeName)} = ${builder.addValue(existingVersion)})`,
 		ExpressionAttributeNames: builder.attributeNames,
 		ExpressionAttributeValues: builder.attributeValues
 	}
@@ -189,7 +189,7 @@ export function flipRelationshipType(relationshipType: TableRelationshipType): T
 }
 
 export function getItemKey(table: Table<any, any, any>, item: Record<string, any>): Record<string, any> {
-	return Object.fromEntries(table.keyAttributes.map(keyAttr => [keyAttr, item[keyAttr]]))
+	return Object.fromEntries(table.keyAttributeNames.map(keyAttr => [keyAttr, item[keyAttr]]))
 }
 
 export function getItemKeyPointer(table: Table<any, any, any>, item: Record<string, any>, separator: string): string | number {
@@ -320,5 +320,5 @@ export function filterUnique<T>(array: Array<T>, eq: (a: T, b: T) => boolean): A
 }
 
 export function itemKeyEq(table: Table<any, any, any>, a: Record<string, any>, b: Record<string, any>): boolean {
-	return table.keyAttributes.filter(keyAttrName => a[keyAttrName] !== b[keyAttrName]).length === 0
+	return table.keyAttributeNames.filter(keyAttrName => a[keyAttrName] !== b[keyAttrName]).length === 0
 }

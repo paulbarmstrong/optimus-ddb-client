@@ -12,13 +12,13 @@ test("regular table", () => {
 		itemShape: fruitShape,
 		partitionKey: "id"
 	})
-	expect(fruitTable.attributes).toStrictEqual(["id", "state"])
+	expect(fruitTable.attributeNames).toStrictEqual(["id", "state"])
 	expect(fruitTable.itemShape).toStrictEqual(fruitShape)
-	expect(fruitTable.keyAttributes).toStrictEqual(["id"])
+	expect(fruitTable.keyAttributeNames).toStrictEqual(["id"])
 	expect(fruitTable.partitionKey).toStrictEqual("id")
 	expect(fruitTable.sortKey).toBeUndefined()
 	expect(fruitTable.tableName).toStrictEqual("Fruit")
-	expect(fruitTable.versionAttribute).toStrictEqual("version")
+	expect(fruitTable.versionAttributeName).toStrictEqual("version")
 })
 
 test("table with sort key and custom version attribute", () => {
@@ -34,13 +34,13 @@ test("table with sort key and custom version attribute", () => {
 		sortKey: "id",
 		versionAttribute: "_version"
 	})
-	expect(documentsTable.attributes).toStrictEqual(["userId", "id", "text"])
+	expect(documentsTable.attributeNames).toStrictEqual(["userId", "id", "text"])
 	expect(documentsTable.itemShape).toStrictEqual(documentShape)
-	expect(documentsTable.keyAttributes).toStrictEqual(["userId", "id"])
+	expect(documentsTable.keyAttributeNames).toStrictEqual(["userId", "id"])
 	expect(documentsTable.partitionKey).toStrictEqual("userId")
 	expect(documentsTable.sortKey).toStrictEqual("id")
 	expect(documentsTable.tableName).toStrictEqual("Documents")
-	expect(documentsTable.versionAttribute).toStrictEqual("_version")
+	expect(documentsTable.versionAttributeName).toStrictEqual("_version")
 })
 
 test("with shape including version attribute", () => {
@@ -90,11 +90,11 @@ test("table from UnionShape", () => {
 		itemShape: resourceEventShape,
 		partitionKey: "id"
 	})
-	expect(resourceEventsTable.attributes).toStrictEqual(["id", "type", "title", "comment"])
+	expect(resourceEventsTable.attributeNames).toStrictEqual(["id", "type", "title", "comment"])
 	expect(resourceEventsTable.itemShape).toStrictEqual(resourceEventShape)
-	expect(resourceEventsTable.keyAttributes).toStrictEqual(["id"])
+	expect(resourceEventsTable.keyAttributeNames).toStrictEqual(["id"])
 	expect(resourceEventsTable.partitionKey).toStrictEqual("id")
 	expect(resourceEventsTable.sortKey).toBeUndefined()
 	expect(resourceEventsTable.tableName).toStrictEqual("ResourceEvents")
-	expect(resourceEventsTable.versionAttribute).toStrictEqual("version")
+	expect(resourceEventsTable.versionAttributeName).toStrictEqual("version")
 })
