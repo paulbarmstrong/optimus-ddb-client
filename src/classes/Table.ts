@@ -120,6 +120,10 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		peerPointerAttributeName: PeerPointerAttributeName,
 		/** The separator used to join the partition key and sort key when one of the Tables has a sort key. */
 		compositeKeySeparator?: string,
+		/** Predicate for when an item should be exempted from the relationship. */
+		itemExemption?: (item: ShapeToType<I>) => boolean,
+		/** Predicate for when an item from the peer Table should be exempted from the relationship. */
+		peerItemExemption?: (item: ShapeToType<I1>) => boolean
 	}) {
 		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable
 				&& relationship.pointerAttributeName === params.pointerAttributeName) !== undefined) {
@@ -130,7 +134,9 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 			pointerAttributeName: params.pointerAttributeName as unknown as string,
 			peerTable: params.peerTable,
 			peerPointerAttributeName: params.peerPointerAttributeName as unknown as string,
-			compositeKeySeparator: params.compositeKeySeparator ?? DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR
+			compositeKeySeparator: params.compositeKeySeparator ?? DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR,
+			itemExemption: params.itemExemption,
+			peerItemExemption: params.peerItemExemption
 		})
 		try {
 			params.peerTable.addRelationship({
@@ -139,6 +145,8 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 				peerTable: this,
 				peerPointerAttributeName: params.pointerAttributeName as any,
 				compositeKeySeparator: params.compositeKeySeparator,
+				itemExemption: params.peerItemExemption,
+				peerItemExemption: params.itemExemption
 			})
 		} catch (error) {
 			if ((error as Error).name !== "TableRelationshipAlreadyExistsError") throw error

@@ -87,7 +87,9 @@ export type TableRelationship = {
 	pointerAttributeName: string,
 	peerTable: Table<any, any, any>,
 	peerPointerAttributeName: string,
-	compositeKeySeparator: string
+	compositeKeySeparator: string,
+	itemExemption?: (item: any) => boolean,
+	peerItemExemption?: (item: any) => boolean
 }
 
 /** @hidden */

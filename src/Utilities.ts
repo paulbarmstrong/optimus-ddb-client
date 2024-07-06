@@ -203,6 +203,7 @@ export function validateRelationshipsOnCommit(perKeyItemChanges: Array<PerKeyIte
 	perKeyItemChanges.forEach(itemChange => {
 		itemChange.table.relationships.forEach(relationship => {
 			const newestItem = (itemChange.newItem ?? itemChange.oldItem)!
+			if (relationship.itemExemption !== undefined && relationship.itemExemption(newestItem) === true) return
 			const mkError = () => new TableRelationshipViolationError({
 				item: newestItem,
 				tableRelationshipType: relationship.type,
