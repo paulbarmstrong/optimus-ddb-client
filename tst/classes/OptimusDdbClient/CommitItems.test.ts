@@ -144,17 +144,31 @@ test("create, update, and delete at the same time across tables", async () => {
 	])
 })
 
-test("create when item already exists", async () => {
-	const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
-	await ddbDocumentClient.send(new PutCommand({
-		TableName: "Resources",
-		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 }
-	}))
-	const resource = optimus.draftItem({
-		table: resourcesTable,
-		item: { id: "bbbb", status: "available", updatedAt: 1702172261700 },
+describe("create when item already exists", () => {
+	test("partition-key table", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Resources",
+			Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, version: 10 }
+		}))
+		const resource = optimus.draftItem({
+			table: resourcesTable,
+			item: { id: "bbbb", status: "available", updatedAt: 1702172261700 },
+		})
+		await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
 	})
-	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
+	test("composite-key table", async () => {
+		const [optimus, ddbDocumentClient] = await prepDdbTest([connectionsTable], [])
+		await ddbDocumentClient.send(new PutCommand({
+			TableName: "Connections",
+			Item: { id: "1111", resourceId: "bbbb", updatedAt: 2819821, version: 0 }
+		}))
+		const connection = optimus.draftItem({
+			table: connectionsTable,
+			item: { id: "1111", resourceId: "bbbb", updatedAt: 2819821, ttl: undefined },
+		})
+		await expect(optimus.commitItems({ items: [connection] })).rejects.toThrow(OptimisticLockError)
+	})
 })
 
 test("update when item's version has changed", async () => {
@@ -286,7 +300,7 @@ test("change that violates the shape", async () => {
 	}))
 	const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
 	resource.status = "starting" as any
-	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow("Parameter \"status\" is invalid.")
+	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow("Parameter \"status\" is invalid.")
 })
 
 describe("change item key", () => {
@@ -340,7 +354,7 @@ describe("change item key", () => {
 
 		const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
 		resource.id = "ffff"
-		expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
+		await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
 	})
 
 	test("item was updated in the mean time", async () => {
@@ -357,7 +371,7 @@ describe("change item key", () => {
 		}))
 
 		resource.id = "ffff"
-		expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
+		await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(OptimisticLockError)
 	})
 	
 	test("commit contains", async () => {
@@ -505,7 +519,7 @@ describe("table with UnionShape itemShape", () => {
 			item: { id: "dddd", type: "new-comment", comment: "hello" }
 		})
 		;(event as any).title = "hello"
-		expect(optimus.commitItems({ items: [event] })).rejects.toThrow(ItemShapeValidationError)
+		await expect(optimus.commitItems({ items: [event] })).rejects.toThrow(ItemShapeValidationError)
 	})
 })
 
@@ -519,7 +533,7 @@ test("item tries to get committed with extra attribute", async () => {
 	resource.status = "deleted"
 	resource.updatedAt = 1702172271700
 	;(resource as any).telemetryCode = "49838943"
-	expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
+	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
 })
 
 describe("regular ONE_TO_ONE relationship", () => {
@@ -553,7 +567,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 			item: { id: "paul", firstLetter: "p", userId: "bbbb" }
 		})
 
-		expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("delete without peer in the commit", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -570,8 +584,8 @@ describe("regular ONE_TO_ONE relationship", () => {
 		optimus.markItemForDeletion({ item: alias })
 		optimus.markItemForDeletion({ item: user })
 
-		expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
-		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("item changes ID and peer isn't in the commit", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -587,7 +601,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
 		user.id = "cccc"
 
-		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("item changes ID and peer isn't updated", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -603,7 +617,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
 		user.id = "cccc"
 
-		expect(optimus.commitItems({ items: [alias, user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [alias, user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("item changes its pointer and peer isn't updated", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -619,7 +633,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 		const user = await optimus.getItem({ table: usersTable, key: { id: "bbbb" } })
 		alias.userId = "cccc"
 
-		expect(optimus.commitItems({ items: [alias, user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [alias, user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("item changes its ID and peer isn't in the commit", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -636,7 +650,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 		user.id = "cccc"
 		alias.userId = "cccc"
 
-		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("item changes its pointer and peer isn't in the commit", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -653,7 +667,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 		user.id = "cccc"
 		alias.userId = "cccc"
 
-		expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [alias] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 	test("both are updated properly", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -793,7 +807,7 @@ describe("composite key table ONE_TO_ONE relationship", () => {
 		user.id = "cccc"
 		alias.userId = "cccc"
 
-		expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
+		await expect(optimus.commitItems({ items: [user] })).rejects.toThrow(TableRelationshipViolationError)
 	})
 })
 

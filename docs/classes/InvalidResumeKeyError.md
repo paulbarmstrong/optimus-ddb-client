@@ -45,7 +45,7 @@ Error.constructor
 
 #### Defined in
 
-[src/Types.ts:130](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L130)
+[src/Types.ts:152](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L152)
 
 ## Properties
 
@@ -87,7 +87,7 @@ Error.name
 
 #### Defined in
 
-[src/Types.ts:129](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L129)
+[src/Types.ts:151](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L151)
 
 ___
 

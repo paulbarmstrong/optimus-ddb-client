@@ -19,9 +19,13 @@ Type representing the nature of a relationship between two Tables
 
 • **MANY\_TO\_MANY** = ``"MANY_TO_MANY"``
 
+Items in this Table are coupled to any number of items in the peer Table, and vice versa.
+
+Items of each Table have an array attribute which identifies its coupled items in the other Table.
+
 #### Defined in
 
-[src/Types.ts:53](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L53)
+[src/Types.ts:75](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L75)
 
 ___
 
@@ -29,9 +33,15 @@ ___
 
 • **MANY\_TO\_ONE** = ``"MANY_TO_ONE"``
 
+Items in this Table are coupled to one item in the peer Table.
+
+Items in the peer Table map to any number of items in this Table. Items of this Table have a string or number
+attribute which identifies its coupled item in the peer Table. Items of the peer Table have an array attribute
+which identifies its coupled items in this Table.
+
 #### Defined in
 
-[src/Types.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L52)
+[src/Types.ts:69](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L69)
 
 ___
 
@@ -39,9 +49,14 @@ ___
 
 • **ONE\_TO\_MANY** = ``"ONE_TO_MANY"``
 
+Items in this Table are coupled to any number of items in the peer Table.
+
+Items of this Table have an array attribute which identifies its coupled items in the peer Table. Items of the
+peer Table have a string or number attribute which identifies its coupled item in this Table.
+
 #### Defined in
 
-[src/Types.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L51)
+[src/Types.ts:61](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L61)
 
 ___
 
@@ -49,8 +64,10 @@ ___
 
 • **ONE\_TO\_ONE** = ``"ONE_TO_ONE"``
 
-There is a 1:1 mapping between each item in the first Table and the second Table.
+There is a 1:1 coupling between each item in this Table and the peer Table.
+
+Items of each Table have a string or number attribute which identifies its coupled item in the other Table.
 
 #### Defined in
 
-[src/Types.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L50)
+[src/Types.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L54)

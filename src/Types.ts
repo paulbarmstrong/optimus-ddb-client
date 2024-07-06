@@ -46,10 +46,32 @@ export type ConditionCondition<L, R> = [L, "=", R] | [L, "exists" | "doesn't exi
 
 /** Type representing the nature of a relationship between two Tables */
 export enum TableRelationshipType {
-	/** There is a 1:1 mapping between each item in the first Table and the second Table. */
+	/**
+	 * There is a 1:1 coupling between each item in this Table and the peer Table.
+	 * 
+	 * Items of each Table have a string or number attribute which identifies its coupled item in the other Table.
+	 */
 	ONE_TO_ONE = "ONE_TO_ONE",
+	/**
+	 * Items in this Table are coupled to any number of items in the peer Table.
+	 * 
+	 * Items of this Table have an array attribute which identifies its coupled items in the peer Table. Items of the
+	 * peer Table have a string or number attribute which identifies its coupled item in this Table.
+	 */
 	ONE_TO_MANY = "ONE_TO_MANY",
+	/**
+	 * Items in this Table are coupled to one item in the peer Table.
+	 * 
+	 * Items in the peer Table map to any number of items in this Table. Items of this Table have a string or number
+	 * attribute which identifies its coupled item in the peer Table. Items of the peer Table have an array attribute
+	 * which identifies its coupled items in this Table. 
+	 */
 	MANY_TO_ONE = "MANY_TO_ONE",
+	/**
+	 * Items in this Table are coupled to any number of items in the peer Table, and vice versa.
+	 * 
+	 * Items of each Table have an array attribute which identifies its coupled items in the other Table.
+	 */
 	MANY_TO_MANY = "MANY_TO_MANY"
 }
 

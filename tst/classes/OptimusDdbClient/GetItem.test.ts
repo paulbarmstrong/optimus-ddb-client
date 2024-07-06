@@ -77,7 +77,7 @@ test("item doesn't match shape", async () => {
 		TableName: "Resources",
 		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, score: 2322, version: 10 }
 	}))
-	expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(ItemShapeValidationError)
+	await expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(ItemShapeValidationError)
 })
 
 test("item doesn't have version", async () => {
@@ -86,5 +86,5 @@ test("item doesn't have version", async () => {
 		TableName: "Resources",
 		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700 }
 	}))
-	expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(Error)
+	await expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(Error)
 })
