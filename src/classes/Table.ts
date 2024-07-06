@@ -121,7 +121,8 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		/** The separator used to join the partition key and sort key when one of the Tables has a sort key. */
 		compositeKeySeparator?: string,
 	}) {
-		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable) !== undefined) {
+		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable
+				&& relationship.pointerAttributeName === params.pointerAttributeName) !== undefined) {
 			throw new TableRelationshipAlreadyExistsError()
 		}
 		this.#relationships.push({

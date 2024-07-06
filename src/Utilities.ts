@@ -14,7 +14,6 @@ export function plurality(num: number) {
 	return num === 1 ? "" : "s"
 }
 
-
 export function getUpdateDynamoDbExpression<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>>
 			(table: Table<any, any, any>, item: ShapeToType<I>, existingVersion: number) {
 	const builder: ExpressionBuilder = new ExpressionBuilder()

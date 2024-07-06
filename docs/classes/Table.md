@@ -198,7 +198,7 @@ corresponding inverted relationship to this Table.
 
 #### Defined in
 
-[src/classes/Table.ts:151](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L151)
+[src/classes/Table.ts:152](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L152)
 
 ## Methods
 
