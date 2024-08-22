@@ -123,7 +123,10 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		/** Predicate for when an item should be exempted from the relationship. */
 		itemExemption?: (item: ShapeToType<I>) => boolean,
 		/** Predicate for when an item from the peer Table should be exempted from the relationship. */
-		peerItemExemption?: (item: ShapeToType<I1>) => boolean
+		peerItemExemption?: (
+			/** @hidden */
+			item: ShapeToType<I1>
+		) => boolean
 	}) {
 		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable
 				&& relationship.pointerAttributeName === params.pointerAttributeName) !== undefined) {
