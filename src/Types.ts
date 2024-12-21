@@ -1,4 +1,4 @@
-import { ShapeValidationError } from "shape-tape"
+import * as z from "zod"
 import { plurality } from "./Utilities"
 import { Table } from "./classes/Table"
 
@@ -159,10 +159,12 @@ export class InvalidResumeKeyError extends Error {
 /**
  * Error for when OptimusDdbClient encounters an item that does not match its Table's `itemShape`.
  */
-export class ItemShapeValidationError extends ShapeValidationError {
+export class ItemShapeValidationError extends Error {
 	name = "ItemShapeValidationError"
-	constructor(params: ConstructorParameters<typeof ShapeValidationError>[0]) {
-		super(params)
+	issues: Array<z.ZodIssue>
+	constructor(zodError: z.ZodError) {
+		super(zodError.message)
+		this.issues = zodError.issues
 	}
 }
 
@@ -210,3 +212,5 @@ export type PerKeyItemChange = {
 	oldItem: Record<string, any> | undefined,
 	newItem: Record<string, any> | undefined
 }
+
+export type NonStripZodObject = z.ZodObject<any, "strict" | "passthrough">

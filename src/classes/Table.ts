@@ -1,7 +1,7 @@
-import { ObjectShape, ShapeToType, UnionShape } from "shape-tape"
+import * as z from "zod"
 import { flipRelationshipType } from "../Utilities"
 import { DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR } from "../Constants"
-import { FlipTableRelationshipType, TableRelationship, TableRelationshipAlreadyExistsError, TableRelationshipType,
+import { FlipTableRelationshipType, NonStripZodObject, TableRelationship, TableRelationshipAlreadyExistsError, TableRelationshipType,
 	TableRelationshipTypeToAttType } from "../Types"
 
 /**
@@ -18,26 +18,27 @@ import { FlipTableRelationshipType, TableRelationship, TableRelationshipAlreadyE
  * 
  * |DynamoDB Type|Shape class|Shape creation example|
  * |-------------|-----------|-------|
- * |S            |StringShape|`s.string()`|
- * |N            |NumberShape|`s.number()`|
- * |BOOL         |BooleanShape|`s.number()`|
- * |B            |ClassShape\<Uint8Array\>|`s.class(Uint8Array)`|
- * |M            |ObjectShape|`s.object({})`|
- * |L            |ArrayShape|`s.array(s.string())`|
- * |NULL         |LiteralShape\<null\>|`s.literal(null)`|
+ * |S            |ZodString|`z.string()`|
+ * |N            |ZodNumber|`z.number()`|
+ * |BOOL         |ZodBoolean|`z.boolean()`|
+ * |B            |ZodType\<Uint8Array\>|`z.instanceOf(Uint8Array)`|
+ * |M            |ZodObject|`z.strictObject({})`|
+ * |L            |ZodArray|`z.array(z.string())`|
+ * |NULL         |ZodNull|`s.null()`|
  * |(Absent Attribute)|LiteralShape\<undefined\>|`s.literal(undefined)`|
  * 
  * An item Shape for a table with items having S attributes "id" and "text" (and N attribute "version" for optimistic 
  * locking) might be:
  * 
  * ```
- * s.object({ id: s.string(), text: s.string() })
+ * z.strictObject({ id: z.string(), text: z.string() })
  * ```
  * 
  * Please see the shape-tape documentation for more details about creating shapes.
  * 
  */
-export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I> = never> {
+
+export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>, S extends keyof z.infer<I> = never> {
 	/** @hidden */
 	#relationships: Array<TableRelationship>
 	/** The name of the DynamoDB table. */
@@ -77,11 +78,11 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		this.itemShape = params.itemShape
 		this.partitionKey = params.partitionKey
 		this.sortKey = params.sortKey
-		if ((params.itemShape as ObjectShape<any,any>).propertyShapes !== undefined) {
-			this.attributeNames = Object.keys((params.itemShape as ObjectShape<any,any>).propertyShapes)
+		if ((params.itemShape as z.ZodObject<any>).shape !== undefined) {
+			this.attributeNames = Object.keys((params.itemShape as z.ZodObject<any>).shape)
 		} else {
-			const attributeNamesNotUnique = (params.itemShape as UnionShape<Array<ObjectShape<any,any>>>)
-				.memberShapes.map(x => Object.keys(x.propertyShapes)).flat()
+			const attributeNamesNotUnique = (params.itemShape as z.ZodUnion<[z.ZodObject<any>, ...z.ZodObject<any>[]]>)
+				.options.map(x => Object.keys(x.shape)).flat()
 			this.attributeNames = [...new Set(attributeNamesNotUnique)]
 		}
 		this.keyAttributeNames = [
@@ -104,11 +105,11 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 	 */
 	addRelationship<
 		RT extends TableRelationshipType,
-		PointerAttributeName extends { [K in keyof ShapeToType<I>]: (K extends P | S ? never : ShapeToType<I>[K] extends TableRelationshipTypeToAttType<RT> ? K : never) }[keyof ShapeToType<I>],
-		I1 extends ObjectShape<any, any> | UnionShape<Array<ObjectShape<any,any>>>,
-		P1 extends keyof ShapeToType<I1>,
-		S1 extends keyof ShapeToType<I1>,
-		PeerPointerAttributeName extends { [K in keyof ShapeToType<I1>]: (K extends P1 | S1 ? never : ShapeToType<I1>[K] extends TableRelationshipTypeToAttType<FlipTableRelationshipType<RT>> ? K : never) }[keyof ShapeToType<I1>]
+		PointerAttributeName extends { [K in keyof z.infer<I>]: (K extends P | S ? never : z.infer<I>[K] extends TableRelationshipTypeToAttType<RT> ? K : never) }[keyof z.infer<I>],
+		I1 extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>,
+		P1 extends keyof z.infer<I1>,
+		S1 extends keyof z.infer<I1>,
+		PeerPointerAttributeName extends { [K in keyof z.infer<I1>]: (K extends P1 | S1 ? never : z.infer<I1>[K] extends TableRelationshipTypeToAttType<FlipTableRelationshipType<RT>> ? K : never) }[keyof z.infer<I1>]
 	>(params: {
 		/** The nature of the table relationship. */
 		type: RT,
@@ -121,11 +122,11 @@ export class Table<I extends ObjectShape<any, any> | UnionShape<Array<ObjectShap
 		/** The separator used to join the partition key and sort key when one of the Tables has a sort key. */
 		compositeKeySeparator?: string,
 		/** Predicate for when an item should be exempted from the relationship. */
-		itemExemption?: (item: ShapeToType<I>) => boolean,
+		itemExemption?: (item: z.infer<I>) => boolean,
 		/** Predicate for when an item from the peer Table should be exempted from the relationship. */
 		peerItemExemption?: (
 			/** @hidden */
-			item: ShapeToType<I1>
+			item: z.infer<I1>
 		) => boolean
 	}) {
 		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable

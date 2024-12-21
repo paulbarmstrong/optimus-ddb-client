@@ -1,7 +1,7 @@
 import { CreateTableCommand, DeleteTableCommand, DescribeTableCommand, DynamoDBClient, ListTablesCommand, ScalarAttributeType
 } from "@aws-sdk/client-dynamodb"
 import { Gsi, OptimusDdbClient, Table } from "../../src"
-import { NumberShape, ObjectShape, Shape, s } from "shape-tape"
+import * as z from "zod"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { DYNAMO_DB_LOCAL_CLIENT_CONFIG } from "./Constants"
 
@@ -52,21 +52,21 @@ export async function prepDdbTest(tables: Array<Table<any,any,any>>, gsis: Array
 	return [new OptimusDdbClient({ dynamoDbClientConfig: DYNAMO_DB_LOCAL_CLIENT_CONFIG }), DynamoDBDocumentClient.from(dynamoDb)]
 }
 
-function shapeToDdbAttributeType(shape: Shape): ScalarAttributeType {
-	if (shape instanceof NumberShape) {
+function shapeToDdbAttributeType(shape: z.ZodTypeAny): ScalarAttributeType {
+	if (shape instanceof z.ZodNumber) {
 		return "N"
 	} else {
 		return "S"
 	}
 }
 
-function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): Shape {
-	if (table.itemShape.propertyShapes !== undefined) {
-		return table.itemShape.propertyShapes[attributeName]
+function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): z.ZodTypeAny {
+	if (table.itemShape.shape !== undefined) {
+		return table.itemShape.shape[attributeName]
 	} else {
-		const specificMembers: Array<Shape> = (table.itemShape.memberShapes as Array<ObjectShape<any>>)
-			.filter(member => Object.keys(member.propertyShapes).includes(attributeName))
-			.map(member => member.propertyShapes[attributeName])
-		return s.union(specificMembers)
+		const specificMembers: Array<z.ZodTypeAny> = (table.itemShape.options as Array<z.ZodObject<any>>)
+			.filter(member => Object.keys(member.shape).includes(attributeName))
+			.map(member => member.shape[attributeName])
+		return z.union(specificMembers as [z.ZodObject<any>, z.ZodObject<any>, ...z.ZodObject<any>[]])
 	}
 }

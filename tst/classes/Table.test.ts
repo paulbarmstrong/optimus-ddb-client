@@ -1,9 +1,9 @@
-import { s } from "shape-tape"
+import { z } from "zod"
 import { Table } from "../../src"
 
-const fruitShape = s.object({
-	id: s.string(),
-	state: s.union([s.literal("available"), s.literal("deleted")])
+const fruitShape = z.strictObject({
+	id: z.string(),
+	state: z.union([z.literal("available"), z.literal("deleted")])
 })
 
 test("regular table", () => {
@@ -22,10 +22,10 @@ test("regular table", () => {
 })
 
 test("table with sort key and custom version attribute", () => {
-	const documentShape = s.object({
-		userId: s.string(),
-		id: s.string(),
-		text: s.string()
+	const documentShape = z.strictObject({
+		userId: z.string(),
+		id: z.string(),
+		text: z.string()
 	})
 	const documentsTable = new Table({
 		tableName: "Documents",
@@ -47,10 +47,10 @@ test("with shape including version attribute", () => {
 	expect(() => {
 		const fruitTable = new Table({
 			tableName: "Fruit",
-			itemShape: s.object({
-				id: s.string(),
-				state: s.union([s.literal("available"), s.literal("deleted")]),
-				version: s.number()
+			itemShape: z.strictObject({
+				id: z.string(),
+				state: z.union([z.literal("available"), z.literal("deleted")]),
+				version: z.number()
 			}),
 			partitionKey: "id"
 		})
@@ -61,10 +61,10 @@ test("with shape including custom version attribute", () => {
 	expect(() => {
 		const fruitTable = new Table({
 			tableName: "Fruit",
-			itemShape: s.object({
-				id: s.string(),
-				state: s.union([s.literal("available"), s.literal("deleted")]),
-				optimisticLockVersion: s.number()
+			itemShape: z.strictObject({
+				id: z.string(),
+				state: z.union([z.literal("available"), z.literal("deleted")]),
+				optimisticLockVersion: z.number()
 			}),
 			partitionKey: "id",
 			versionAttribute: "optimisticLockVersion"
@@ -73,16 +73,16 @@ test("with shape including custom version attribute", () => {
 })
 
 test("table from UnionShape", () => {
-	const resourceEventShape = s.union([
-		s.object({
-			id: s.string(),
-			type: s.literal("title-change"),
-			title: s.string()
+	const resourceEventShape = z.union([
+		z.strictObject({
+			id: z.string(),
+			type: z.literal("title-change"),
+			title: z.string()
 		}),
-		s.object({
-			id: s.string(),
-			type: s.literal("new-comment"),
-			comment: s.string()
+		z.strictObject({
+			id: z.string(),
+			type: z.literal("new-comment"),
+			comment: z.string()
 		})
 	])
 	const resourceEventsTable = new Table({

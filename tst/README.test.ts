@@ -1,4 +1,4 @@
-import { s } from "shape-tape"
+import * as z from "zod"
 import { Table } from "../src"
 import crypto from "crypto"
 import { prepDdbTest } from "./test-utilities/DynamoDb"
@@ -8,20 +8,20 @@ test("Example from README", async () => {
 	// Create Table class instances based on your DynamoDB tables.
 	const blogPostsTable = new Table({
 		tableName: "BlogPosts",
-		itemShape: s.object({
-			id: s.string(),
-			name: s.string(),
-			content: s.string(),
-			numComments: s.integer()
+		itemShape: z.strictObject({
+			id: z.string(),
+			name: z.string(),
+			content: z.string(),
+			numComments: z.number().int()
 		}),
 		partitionKey: "id"
 	})
 	const commentsTable = new Table({
 		tableName: "Comments",
-		itemShape: s.object({
-			blogPostId: s.string(),
-			id: s.string(),
-			content: s.string()
+		itemShape: z.strictObject({
+			blogPostId: z.string(),
+			id: z.string(),
+			content: z.string()
 		}),
 		partitionKey: "blogPostId",
 		sortKey: "id"

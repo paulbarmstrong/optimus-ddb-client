@@ -1,6 +1,6 @@
 import { DynamoDBClientConfig } from "@aws-sdk/client-dynamodb"
-import { ShapeToType, s } from "shape-tape"
 import { Gsi, Table } from "../../src"
+import * as z from "zod"
 
 export const DYNAMO_DB_LOCAL_PORT: number = 8000
 export const DYNAMO_DB_LOCAL_CLIENT_CONFIG: DynamoDBClientConfig = {
@@ -14,25 +14,25 @@ export const DYNAMO_DB_LOCAL_CLIENT_CONFIG: DynamoDBClientConfig = {
 
 export class MyError extends Error {}
 
-export const resourceShape = s.object({
-	id: s.string(),
-	status: s.union([s.literal("available"), s.literal("deleted")]),
-	updatedAt: s.integer()
+export const resourceShape = z.strictObject({
+	id: z.string(),
+	status: z.union([z.literal("available"), z.literal("deleted")]),
+	updatedAt: z.number().int()
 })
-export type Resource = ShapeToType<typeof resourceShape>
+export type Resource = z.infer<typeof resourceShape>
 export const resourcesTable = new Table({
 	tableName: "Resources",
 	itemShape: resourceShape,
 	partitionKey: "id"
 })
 
-export const connectionShape = s.object({
-	id: s.string(),
-	resourceId: s.string(),
-	updatedAt: s.integer(),
-	ttl: s.optional(s.integer())
+export const connectionShape = z.strictObject({
+	id: z.string(),
+	resourceId: z.string(),
+	updatedAt: z.number().int(),
+	ttl: z.optional(z.number().int())
 })
-export type Connection = ShapeToType<typeof connectionShape>
+export type Connection = z.infer<typeof connectionShape>
 export const connectionsTable = new Table({
 	tableName: "Connections",
 	itemShape: connectionShape,
@@ -45,13 +45,13 @@ export const connectionsTableResourceIdGsi = new Gsi({
 	partitionKey: "resourceId"
 })
 
-export const livestreamShape = s.object({
-	id: s.string(),
-	category: s.literal("livestreams"),
-	viewerCount: s.integer({min: 0}),
-	metadata: s.class(Uint8Array)
+export const livestreamShape = z.strictObject({
+	id: z.string(),
+	category: z.literal("livestreams"),
+	viewerCount: z.number().int().min(0),
+	metadata: z.instanceof(Uint8Array)
 })
-export type Livestream = ShapeToType<typeof livestreamShape>
+export type Livestream = z.infer<typeof livestreamShape>
 export const livestreamsTable = new Table({
 	tableName: "Livestreams",
 	itemShape: livestreamShape,
@@ -64,19 +64,19 @@ export const livestreamsTableViewerCountGsi = new Gsi({
 	sortKey: "viewerCount"
 })
 
-export const resourceEventShape = s.union([
-	s.object({
-		id: s.string(),
-		type: s.literal("title-change"),
-		title: s.string()
+export const resourceEventShape = z.union([
+	z.strictObject({
+		id: z.string(),
+		type: z.literal("title-change"),
+		title: z.string()
 	}),
-	s.object({
-		id: s.string(),
-		type: s.literal("new-comment"),
-		comment: s.string()
+	z.strictObject({
+		id: z.string(),
+		type: z.literal("new-comment"),
+		comment: z.string()
 	})
 ])
-export type ResourceEvent = ShapeToType<typeof resourceEventShape>
+export type ResourceEvent = z.infer<typeof resourceEventShape>
 export const resourceEventsTable = new Table({
 	tableName: "ResourceEvents",
 	itemShape: resourceEventShape,

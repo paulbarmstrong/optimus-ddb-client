@@ -4,8 +4,10 @@ import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKe
 	MergeUnion, TableRelationshipViolationError, 
 	TableRelationshipType,
 	TableRelationship,
-	PerKeyItemChange} from "./Types"
-import { ObjectShape, Shape, ShapeToType, UnionShape, s, validateDataShape }  from "shape-tape"
+	PerKeyItemChange,
+	ItemShapeValidationError,
+	NonStripZodObject} from "./Types"
+import * as z from "zod"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
 import { ItemData } from "./classes/OptimusDdbClient"
@@ -14,8 +16,8 @@ export function plurality(num: number) {
 	return num === 1 ? "" : "s"
 }
 
-export function getUpdateDynamoDbExpression<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>>
-			(table: Table<any, any, any>, item: ShapeToType<I>, existingVersion: number) {
+export function getUpdateDynamoDbExpression<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>>
+			(table: Table<any, any, any>, item: z.infer<I>, existingVersion: number) {
 	const builder: ExpressionBuilder = new ExpressionBuilder()
 	const set = table.attributeNames
 		.filter(key => item[key as string] !== undefined && !table.keyAttributeNames.includes(key as string))
@@ -115,15 +117,12 @@ export function encodeResumeKey<T extends Record<string, any>>(lastEvaluatedKey:
 	return JSON.stringify(lastEvaluatedKey)
 }
 
-export function decodeResumeKey<T extends Shape>(resumeKey: string | undefined, keyShape: T,
+export function decodeResumeKey<T extends z.ZodTypeAny>(resumeKey: string | undefined, keyShape: T,
 		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error)
-		: ShapeToType<typeof keyShape> | undefined {
+		: z.infer<typeof keyShape> | undefined {
 	if (resumeKey === undefined) return undefined
 	try {
-		return validateDataShape({
-			data: JSON.parse(resumeKey),
-			shape: keyShape
-		})
+		return zodValidate(keyShape, JSON.parse(resumeKey))
 	} catch (error) {
 		if (invalidResumeKeyErrorOverride !== undefined) {
 			throw invalidResumeKeyErrorOverride(new InvalidResumeKeyError())
@@ -133,9 +132,9 @@ export function decodeResumeKey<T extends Shape>(resumeKey: string | undefined, 
 	}
 }
 
-export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): Shape {
+export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): z.ZodTypeAny {
 	const table = getIndexTable(index)
-	return s.object({
+	return z.strictObject({
 		[table.partitionKey]: getItemShapePropertyValueShape(table, table.partitionKey),
 		...(table.sortKey !== undefined ? (
 			{ [table.sortKey]: getItemShapePropertyValueShape(table, table.sortKey) }
@@ -157,18 +156,18 @@ export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any
 	})
 }
 
-function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): Shape {
-	if (table.itemShape.propertyShapes !== undefined) {
-		return table.itemShape.propertyShapes[attributeName]
+function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): z.ZodTypeAny {
+	if (table.itemShape.shape !== undefined) {
+		return table.itemShape.shape[attributeName]
 	} else {
-		const specificMembers: Array<Shape> = (table.itemShape.memberShapes as Array<ObjectShape<any,any>>)
-			.filter(member => Object.keys(member.propertyShapes).includes(attributeName))
-			.map(member => member.propertyShapes[attributeName])
-		return s.union(specificMembers)
+		const specificMembers: Array<z.ZodTypeAny> = (table.itemShape.options as Array<NonStripZodObject>)
+			.filter(member => Object.keys(member.shape).includes(attributeName))
+			.map(member => member.shape[attributeName])
+		return z.union(specificMembers as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
 	}
 }
 
-export function getIndexTable<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, S extends keyof MergeUnion<ShapeToType<I>> = never>
+export function getIndexTable<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof MergeUnion<z.infer<I>>, S extends keyof MergeUnion<z.infer<I>> = never>
 		(index: Table<I,P,S> | Gsi<I,P,S>): Table<I,P,S> {
 	if (isGsi(index)) {
 		return (index as Gsi<I,P,S>).table
@@ -321,4 +320,17 @@ export function filterUnique<T>(array: Array<T>, eq: (a: T, b: T) => boolean): A
 
 export function itemKeyEq(table: Table<any, any, any>, a: Record<string, any>, b: Record<string, any>): boolean {
 	return table.keyAttributeNames.filter(keyAttrName => a[keyAttrName] !== b[keyAttrName]).length === 0
+}
+
+export function zodValidate<T extends z.ZodTypeAny>(schema: T, data: any, errorMapping?: (e: z.ZodError) => Error): z.infer<T> {
+	try {
+		schema.parse(data)
+		return data
+	} catch (error) {
+		if (error instanceof z.ZodError && errorMapping !== undefined) {
+			throw errorMapping(error)
+		} else {
+			throw error
+		}
+	}
 }

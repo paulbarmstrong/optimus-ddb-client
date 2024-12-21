@@ -1,11 +1,13 @@
 import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput,  QueryCommandOutput, ScanCommandOutput} from "@aws-sdk/lib-dynamodb"
-import { ObjectShape, ShapeToType, UnionShape, validateDataShape } from "shape-tape"
+import * as z from "zod"
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
-	OptimisticLockError, PartitionKeyCondition, MergeUnion } from "../Types"
+	OptimisticLockError, PartitionKeyCondition, MergeUnion, 
+	NonStripZodObject} from "../Types"
 import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable,
-	getLastEvaluatedKeyShape, getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit } from "../Utilities"
+	getLastEvaluatedKeyShape, getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit, 
+	zodValidate} from "../Utilities"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
 import { SortKeyCondition, UnprocessedKeysError } from "../Types"
@@ -56,14 +58,14 @@ export class OptimusDdbClient {
 	 * @returns The drafted item.
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	draftItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, S extends keyof ShapeToType<I>, 
-			T extends ShapeToType<I>>(params: {
+	draftItem<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>, S extends keyof z.infer<I>, 
+			T extends z.infer<I>>(params: {
 		/** Table where the item should go. */
 		table: Table<I,P,S>,
 		/** Object representing the item to be drafted. It should be an object not provided to OptimusDdbClient before. */
 		item: T
 	}): T {
-		return this.#recordAndStripItem({ ...params.item }, params.table, true)
+		return this.#recordAndStripItem<I, P, S>({ ...params.item }, params.table, true) as T
 	}
 
 	/**
@@ -88,19 +90,19 @@ export class OptimusDdbClient {
 	 * @throws ItemNotFoundError if the item is not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
 	 */
-	async getItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>,
-			S extends keyof ShapeToType<I>, E extends Error | undefined = Error>(params: {
+	async getItem<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>,
+			S extends keyof z.infer<I>, E extends Error | undefined = Error>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
 		/** Key to look up. */
-		key: { [T in P]: ShapeToType<I>[P] } & { [T in S]: ShapeToType<I>[S] }
+		key: { [T in P]: z.infer<I>[P] } & { [T in S]: z.infer<I>[S] }
 		/**
 		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error`
 		 * then `getItem` will throw that error instead of `ItemNotFoundError`. If it 
 		 * returns `undefined` then `getItem` will return `undefined` instead of throwing `ItemNotFoundError`.
 		 */
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => E
-	}): Promise<E extends Error ? ShapeToType<I> : ShapeToType<I> | undefined> {
+	}): Promise<E extends Error ? z.infer<I> : z.infer<I> | undefined> {
 		const item = (await this.#ddbDocumentClient.send(new GetCommand({
 			TableName: params.table.tableName,
 			Key: params.key,
@@ -115,10 +117,10 @@ export class OptimusDdbClient {
 			if (error instanceof Error) {
 				throw error
 			} else {
-				return undefined as E extends Error ? ShapeToType<I> : ShapeToType<I> | undefined
+				return undefined as E extends Error ? z.infer<I> : z.infer<I> | undefined
 			}
 		} else {
-			return this.#recordAndStripItem(item, params.table, false) as ShapeToType<I>
+			return this.#recordAndStripItem(item, params.table, false) as z.infer<I>
 		}
 	}
 
@@ -134,19 +136,19 @@ export class OptimusDdbClient {
 	 * @throws ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOverride` is not set).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async getItems<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>,
-			S extends keyof ShapeToType<I>>(params: {
+	async getItems<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>,
+			S extends keyof z.infer<I>>(params: {
 		/** Table to look in. */
 		table: Table<I,P,S>,
 		/** Keys to look up. */
-		keys: Array<{ [T in P]: ShapeToType<I>[P] } & { [T in S]: ShapeToType<I>[S] }>,
+		keys: Array<{ [T in P]: z.infer<I>[P] } & { [T in S]: z.infer<I>[S] }>,
 		/**
 		 * Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw 
 		 * that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItems` will omit the item
 		 * from its response instead of throwing `ItemNotFoundError`.
 		 */
 		itemNotFoundErrorOverride?: (e: ItemNotFoundError) => Error | undefined
-	}): Promise<Array<ShapeToType<I>>> {
+	}): Promise<Array<z.infer<I>>> {
 		if (params.keys.length === 0) return []
 		const unfinishedKeys: Array<Record<string,any>> = [...params.keys]
 		const finishedItems: Array<Record<string,any>> = []
@@ -204,16 +206,16 @@ export class OptimusDdbClient {
 	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async queryItems<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
-			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
+	async queryItems<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof MergeUnion<z.infer<I>>, 
+			S extends keyof MergeUnion<z.infer<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to query. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		/** Condition to specify which partition the Query will take place in. */
-		partitionKeyCondition: PartitionKeyCondition<P, ShapeToType<I>[P]>
+		partitionKeyCondition: PartitionKeyCondition<P, z.infer<I>[P]>
 		/** Optional condition to specify how the partition will be queried. */
-		sortKeyCondition?: AnyToNever<MergeUnion<ShapeToType<I>>[S]> extends never ? never : SortKeyCondition<S, MergeUnion<ShapeToType<I>>[S]>,
+		sortKeyCondition?: AnyToNever<MergeUnion<z.infer<I>>[S]> extends never ? never : SortKeyCondition<S, MergeUnion<z.infer<I>>[S]>,
 		/** Optional condition to filter items during the query. */
-		filterCondition?: FilterCondition<Omit<Omit<MergeUnion<ShapeToType<I>>, P>, S>>,
+		filterCondition?: FilterCondition<Omit<Omit<MergeUnion<z.infer<I>>, P>, S>>,
 		/** Optional parameter used to switch the order of the query. */
 		scanIndexForward?: boolean,
 		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. */
@@ -222,7 +224,7 @@ export class OptimusDdbClient {
 		limit?: L,
 		/** Optional parameter to override `InvalidResumeKeyError`. */
 		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error
-	}): Promise<[Array<ShapeToType<I>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<z.infer<I>>, L extends number ? string | undefined : undefined]> {
 		const [items, resumeKey] = await this.#handleQueryOrScan({
 			index: params.index,
 			commandInput: {
@@ -262,19 +264,19 @@ export class OptimusDdbClient {
 	 * by the Table's itemShape).
 	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
 	 */
-	async scanItems<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
-			S extends keyof MergeUnion<ShapeToType<I>>, L extends number | undefined = undefined>(params: {
+	async scanItems<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof MergeUnion<z.infer<I>>, 
+			S extends keyof MergeUnion<z.infer<I>>, L extends number | undefined = undefined>(params: {
 		/** The table or GSI to scan. */
 		index: Table<I,P,S> | Gsi<I,P,S>,
 		/** Optional condition to filter items during the scan. */
-		filterCondition?: FilterCondition<MergeUnion<ShapeToType<I>>>,
+		filterCondition?: FilterCondition<MergeUnion<z.infer<I>>>,
 		/** Optional parameter to continue based on a `resumeKey` returned from an earlier `scanItems` call. */
 		resumeKey?: string,
 		/** Optional limit on the number of items to find before returning. */
 		limit?: L,
 		/** Optional parameter to override `InvalidResumeKeyError`. */
 		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error
-	}): Promise<[Array<ShapeToType<I>>, L extends number ? string | undefined : undefined]> {
+	}): Promise<[Array<z.infer<I>>, L extends number ? string | undefined : undefined]> {
 		const [items, resumeKey] = await this.#handleQueryOrScan({
 			index: params.index,
 			commandInput: {
@@ -310,11 +312,7 @@ export class OptimusDdbClient {
 		if (params.items.length === 0) return
 		params.items.forEach(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
-			validateDataShape({
-				data: item,
-				shape: this.#recordedItems.get(item)!.table.itemShape,
-				shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
-			})
+			zodValidate(this.#recordedItems.get(item)!.table.itemShape, item, e => new ItemShapeValidationError(e))
 		})
 		const perKeyItemChanges = optimusCommitItemsToPerKeyItemChanges(this.#recordedItems, params.items)
 		validateRelationshipsOnCommit(perKeyItemChanges)
@@ -410,17 +408,13 @@ export class OptimusDdbClient {
 	}
 	
 	/** @hidden */
-	#recordAndStripItem<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof ShapeToType<I>, 
-			S extends keyof ShapeToType<I>>(item: any, table: Table<I,P,S>, create: boolean): ShapeToType<typeof table.itemShape> {
+	#recordAndStripItem<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>, 
+			S extends keyof z.infer<I>>(item: any, table: Table<I,P,S>, create: boolean): z.infer<typeof table.itemShape> {
 		if (!create && !Number.isInteger(item[table.versionAttributeName]))
 			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttributeName}": ${JSON.stringify(item)}`)
 		const version = create ? 0 : item[table.versionAttributeName]
 		delete item[table.versionAttributeName]
-		const validatedItem: ShapeToType<typeof table.itemShape> = validateDataShape({
-			data: item,
-			shape: table.itemShape,
-			shapeValidationErrorOverride: e => new ItemShapeValidationError(e)
-		})
+		zodValidate(table.itemShape, item, e => new ItemShapeValidationError(e))
 		this.#recordedItems.set(item, {
 			table: table,
 			existingItem: shallowCloneObjectAndDirectArrays(item),
@@ -428,19 +422,19 @@ export class OptimusDdbClient {
 			delete: false,
 			create: create
 		})
-		return validatedItem
+		return item
 	}
 
 	/** @hidden */
-	async #handleQueryOrScan<I extends ObjectShape<any,any> | UnionShape<Array<ObjectShape<any,any>>>, P extends keyof MergeUnion<ShapeToType<I>>, 
-			S extends keyof MergeUnion<ShapeToType<I>>>(params: {
+	async #handleQueryOrScan<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof MergeUnion<z.infer<I>>, 
+			S extends keyof MergeUnion<z.infer<I>>>(params: {
 		index: Table<I,P,S> | Gsi<I,P,S>
         commandInput: QueryCommandInput | ScanCommandInput,
         get: (input: QueryCommandInput | ScanCommandInput) => Promise<QueryCommandOutput | ScanCommandOutput>,
 		limit: number | undefined,
         resumeKey: string | undefined,
 		invalidResumeKeyErrorOverride: ((e: InvalidResumeKeyError) => Error) | undefined
-	}): Promise<[Array<ShapeToType<I>>, string | undefined]> {
+	}): Promise<[Array<z.infer<I>>, string | undefined]> {
 		const table = getIndexTable(params.index)
 		const itemsPagesIterator = new ItemsPagesIterator({
 			commandInput: params.commandInput,
@@ -448,7 +442,7 @@ export class OptimusDdbClient {
 			limit: params.limit,
 			lastEvaluatedKey: decodeResumeKey(params.resumeKey, getLastEvaluatedKeyShape(params.index), params.invalidResumeKeyErrorOverride)
 		})
-		const items: Array<ShapeToType<I>> = []
+		const items: Array<z.infer<I>> = []
 		while (itemsPagesIterator.hasNext()) {
 			const page = await itemsPagesIterator.next()
 			const incompleteItems: Array<Record<string,any>> = []
@@ -457,7 +451,7 @@ export class OptimusDdbClient {
 					items.push(this.#recordAndStripItem(item, table, false))
 				} catch (error) {
 					if (isGsi(params.index) && 
-						((error as any).name === "ItemWithoutVersionError" || ((error as any).name === "ItemShapeValidationError" && (error as ItemShapeValidationError).data === undefined))) {
+						((error as any).name === "ItemWithoutVersionError")) {
 						incompleteItems.push(item)
 					} else {
 						throw error
