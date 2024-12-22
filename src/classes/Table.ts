@@ -1,8 +1,7 @@
 import * as z from "zod"
 import { flipRelationshipType } from "../Utilities"
-import { DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR } from "../Constants"
-import { FlipTableRelationshipType, NonStripZodObject, TableRelationship, TableRelationshipAlreadyExistsError, TableRelationshipType,
-	TableRelationshipTypeToAttType } from "../Types"
+import { FlipTableRelationshipType, NonStripZodObject, TableRelationship, TableRelationshipForeignKeyPlurality,
+	TableRelationshipType } from "../Types"
 
 /**
  * Table represents a DynamoDB Table. It can be created once and then provided to OptimusDdbClient
@@ -41,7 +40,7 @@ import { FlipTableRelationshipType, NonStripZodObject, TableRelationship, TableR
 
 export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>, S extends keyof z.infer<I> = never> {
 	/** @hidden */
-	#relationships: Array<TableRelationship>
+	#relationships: Array<TableRelationship<any>>
 	/** The name of the DynamoDB table. */
 	readonly tableName: string
 	/** Zod schema representing the structure of items in the table. Please see the Table class documentation for details. */
@@ -106,53 +105,48 @@ export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, 
 	 */
 	addRelationship<
 		RT extends TableRelationshipType,
-		PointerAttributeName extends { [K in keyof z.infer<I>]: (K extends P | S ? never : z.infer<I>[K] extends TableRelationshipTypeToAttType<RT> ? K : never) }[keyof z.infer<I>],
 		I1 extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>,
 		P1 extends keyof z.infer<I1>,
-		S1 extends keyof z.infer<I1>,
-		PeerPointerAttributeName extends { [K in keyof z.infer<I1>]: (K extends P1 | S1 ? never : z.infer<I1>[K] extends TableRelationshipTypeToAttType<FlipTableRelationshipType<RT>> ? K : never) }[keyof z.infer<I1>]
+		S1 extends keyof z.infer<I1>
 	>(params: {
 		/** The nature of the table relationship. */
 		type: RT,
-		/** The attribute on this Table which points to items of the peer Table. */
-		pointerAttributeName: PointerAttributeName,
 		/** The other Table in the relationship. */
 		peerTable: Table<I1, P1, S1>,
-		/** The attribute on the peer Table which points to items of this Table. */
-		peerPointerAttributeName: PeerPointerAttributeName,
-		/** The separator used to join the partition key and sort key when one of the Tables has a sort key. */
-		compositeKeySeparator?: string,
+		/** Function for producing the current foreign keys of a given item. */
+		itemForeignKeys: (item: z.infer<I>) => TableRelationshipForeignKeyPlurality<RT, { [T1 in P1]: z.infer<I1>[P1] } & { [T1 in S1]: z.infer<I1>[S1] }>,
+		/** Function for producing the current foreign keys of a given peer item. */
+		peerItemForeignKeys: (item: z.infer<I1>) => TableRelationshipForeignKeyPlurality<FlipTableRelationshipType<RT>, { [T in P]: z.infer<I>[P] } & { [T in S]: z.infer<I>[S] }>,
 		/** Predicate for when an item should be exempted from the relationship. */
 		itemExemption?: (item: z.infer<I>) => boolean,
 		/** Predicate for when an item from the peer Table should be exempted from the relationship. */
 		peerItemExemption?: (item: z.infer<I1>) => boolean
 	}) {
-		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable
-				&& relationship.pointerAttributeName === params.pointerAttributeName) !== undefined) {
-			throw new TableRelationshipAlreadyExistsError()
-		}
 		this.#relationships.push({
 			type: params.type,
-			pointerAttributeName: params.pointerAttributeName as unknown as string,
 			peerTable: params.peerTable,
-			peerPointerAttributeName: params.peerPointerAttributeName as unknown as string,
-			compositeKeySeparator: params.compositeKeySeparator ?? DEFAULT_RELATIONSHIP_COMPOSITE_KEY_SEPARATOR,
+			itemForeignKeys: params.itemForeignKeys,
+			peerItemForeignKeys: params.peerItemForeignKeys,
 			itemExemption: params.itemExemption,
 			peerItemExemption: params.peerItemExemption
 		})
 		try {
-			params.peerTable.addRelationship({
+			params.peerTable._addRelationshipAux({
 				type: flipRelationshipType(params.type),
-				pointerAttributeName: params.peerPointerAttributeName as any,
 				peerTable: this,
-				peerPointerAttributeName: params.pointerAttributeName as any,
-				compositeKeySeparator: params.compositeKeySeparator,
+				itemForeignKeys: params.peerItemForeignKeys,
+				peerItemForeignKeys: params.itemForeignKeys,
 				itemExemption: params.peerItemExemption,
 				peerItemExemption: params.itemExemption
 			})
 		} catch (error) {
 			if ((error as Error).name !== "TableRelationshipAlreadyExistsError") throw error
 		}
+	}
+
+	/** @hidden */
+	_addRelationshipAux(relationship: TableRelationship<any>) {
+		this.#relationships.push(relationship)
 	}
 
 	/** 

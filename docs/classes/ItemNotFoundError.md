@@ -54,7 +54,7 @@ Error.constructor
 
 #### Defined in
 
-[src/Types.ts:130](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L130)
+[src/Types.ts:129](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L129)
 
 ## Properties
 
@@ -80,7 +80,7 @@ The keys of the item(s) that were not found.
 
 #### Defined in
 
-[src/Types.ts:129](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L129)
+[src/Types.ts:128](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L128)
 
 ___
 
@@ -108,7 +108,7 @@ Error.name
 
 #### Defined in
 
-[src/Types.ts:127](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L127)
+[src/Types.ts:126](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L126)
 
 ___
 

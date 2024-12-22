@@ -97,7 +97,7 @@ Please see [zod](https://www.npmjs.com/package/zod) for more details about creat
 
 #### Defined in
 
-[src/classes/Table.ts:62](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L62)
+[src/classes/Table.ts:61](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L61)
 
 ## Properties
 
@@ -109,7 +109,7 @@ The names of all of the item attributes (except for the version attribute).
 
 #### Defined in
 
-[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L54)
+[src/classes/Table.ts:53](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L53)
 
 ___
 
@@ -121,7 +121,7 @@ Zod schema representing the structure of items in the table. Please see the Tabl
 
 #### Defined in
 
-[src/classes/Table.ts:48](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L48)
+[src/classes/Table.ts:47](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L47)
 
 ___
 
@@ -134,7 +134,7 @@ if the table has a sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L59)
+[src/classes/Table.ts:58](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L58)
 
 ___
 
@@ -146,7 +146,7 @@ The name of the DynamoDB table's partition key.
 
 #### Defined in
 
-[src/classes/Table.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L50)
+[src/classes/Table.ts:49](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L49)
 
 ___
 
@@ -158,7 +158,7 @@ The name of the DynamoDB table's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L52)
+[src/classes/Table.ts:51](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L51)
 
 ___
 
@@ -170,7 +170,7 @@ The name of the DynamoDB table.
 
 #### Defined in
 
-[src/classes/Table.ts:46](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L46)
+[src/classes/Table.ts:45](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L45)
 
 ___
 
@@ -182,30 +182,30 @@ The name of the version attribute used for optimistic locking.
 
 #### Defined in
 
-[src/classes/Table.ts:61](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L61)
+[src/classes/Table.ts:60](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L60)
 
 ## Accessors
 
 ### relationships
 
-• `get` **relationships**(): `TableRelationship`[]
+• `get` **relationships**(): `TableRelationship`\<`any`\>[]
 
 The relationships that are applied to the Table. For each relationship, the peer Table has a
 corresponding inverted relationship to this Table.
 
 #### Returns
 
-`TableRelationship`[]
+`TableRelationship`\<`any`\>[]
 
 #### Defined in
 
-[src/classes/Table.ts:162](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L162)
+[src/classes/Table.ts:156](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L156)
 
 ## Methods
 
 ### addRelationship
 
-▸ **addRelationship**\<`RT`, `PointerAttributeName`, `I1`, `P1`, `S1`, `PeerPointerAttributeName`\>(`params`): `void`
+▸ **addRelationship**\<`RT`, `I1`, `P1`, `S1`\>(`params`): `void`
 
 Add a relationship to the Table. Table relationships are enforced upon OptimusDdbClient's `commitItems`.
 
@@ -214,23 +214,20 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 | Name | Type |
 | :------ | :------ |
 | `RT` | extends [`TableRelationshipType`](../enums/TableRelationshipType.md) |
-| `PointerAttributeName` | extends `string` \| `number` \| `symbol` |
 | `I1` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P1` | extends `string` \| `number` \| `symbol` |
 | `S1` | extends `string` \| `number` \| `symbol` |
-| `PeerPointerAttributeName` | extends `string` \| `number` \| `symbol` |
 
 #### Parameters
 
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.compositeKeySeparator?` | `string` | The separator used to join the partition key and sort key when one of the Tables has a sort key. |
 | `params.itemExemption?` | (`item`: `TypeOf`\<`I`\>) => `boolean` | Predicate for when an item should be exempted from the relationship. |
+| `params.itemForeignKeys` | (`item`: `TypeOf`\<`I`\>) => `TableRelationshipForeignKeyPlurality`\<`RT`, \{ [T1 in string \| number \| symbol]: TypeOf\<I1\>[P1] } & \{ [T1 in string \| number \| symbol]: TypeOf\<I1\>[S1] }\> | Function for producing the current foreign keys of a given item. |
 | `params.peerItemExemption?` | (`item`: `TypeOf`\<`I1`\>) => `boolean` | Predicate for when an item from the peer Table should be exempted from the relationship. |
-| `params.peerPointerAttributeName` | `PeerPointerAttributeName` | The attribute on the peer Table which points to items of this Table. |
+| `params.peerItemForeignKeys` | (`item`: `TypeOf`\<`I1`\>) => `TableRelationshipForeignKeyPlurality`\<`FlipTableRelationshipType`\<`RT`\>, \{ [T in string \| number \| symbol]: TypeOf\<I\>[P] } & \{ [T in string \| number \| symbol]: TypeOf\<I\>[S] }\> | Function for producing the current foreign keys of a given peer item. |
 | `params.peerTable` | [`Table`](Table.md)\<`I1`, `P1`, `S1`\> | The other Table in the relationship. |
-| `params.pointerAttributeName` | `PointerAttributeName` | The attribute on this Table which points to items of the peer Table. |
 | `params.type` | `RT` | The nature of the table relationship. |
 
 #### Returns
@@ -239,4 +236,4 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 
 #### Defined in
 
-[src/classes/Table.ts:107](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L107)
+[src/classes/Table.ts:106](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L106)

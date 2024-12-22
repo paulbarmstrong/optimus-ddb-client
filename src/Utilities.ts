@@ -5,8 +5,8 @@ import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKe
 	TableRelationshipType,
 	TableRelationship,
 	PerKeyItemChange,
-	ItemValidationError,
-	NonStripZodObject} from "./Types"
+	NonStripZodObject,
+	OneOrArray} from "./Types"
 import * as z from "zod"
 import { Table } from "./classes/Table"
 import { Gsi } from "./classes/Gsi"
@@ -190,14 +190,6 @@ export function getItemKey(table: Table<any, any, any>, item: Record<string, any
 	return Object.fromEntries(table.keyAttributeNames.map(keyAttr => [keyAttr, item[keyAttr]]))
 }
 
-export function getItemKeyPointer(table: Table<any, any, any>, item: Record<string, any>, separator: string): string | number {
-	if (table.sortKey === undefined) {
-		return item[table.partitionKey]
-	} else {
-		return `${item[table.partitionKey]}${separator}${item[table.sortKey]}`
-	}
-}
-
 export function validateRelationshipsOnCommit(perKeyItemChanges: Array<PerKeyItemChange>) {
 	perKeyItemChanges.forEach(itemChange => {
 		itemChange.table.relationships.forEach(relationship => {
@@ -208,68 +200,40 @@ export function validateRelationshipsOnCommit(perKeyItemChanges: Array<PerKeyIte
 				tableRelationshipType: relationship.type,
 				tables: [itemChange.table, relationship.peerTable]
 			})
-			const itemKeyPointer = getItemKeyPointer(itemChange.table, itemChange.key, relationship.compositeKeySeparator)
-			const existingPointers = getExistingPointers(relationship, itemChange)
-			const latestPointers = getLatestPointers(relationship, itemChange)
-			const removedPointers: Array<string | number> = existingPointers
-				.filter(existingPointer => !latestPointers.includes(existingPointer))
-			const addedPointers: Array<string | number> = latestPointers
-				.filter(newPointer => !existingPointers.includes(newPointer))
-			;[...removedPointers, ...addedPointers].forEach(changedPointer => {
-				const added = addedPointers.includes(changedPointer)
+			const itemKey = getItemKey(itemChange.table, itemChange.key)
+			const existingForeignKeys = getForeignKeys(relationship.itemForeignKeys, itemChange.oldItem)
+			const latestForeignKeys = getForeignKeys(relationship.itemForeignKeys, itemChange.newItem)
+			const removedForeignKeys = existingForeignKeys
+				.filter(existingForeignKey => !includes(latestForeignKeys, existingForeignKey, shallowObjectEq))
+			const addedForeignKeys = latestForeignKeys
+				.filter(latestForeignKey => !includes(existingForeignKeys, latestForeignKey, shallowObjectEq))
+			;[...removedForeignKeys, ...addedForeignKeys].forEach(changedForeignKey => {
+				const added = includes(addedForeignKeys, changedForeignKey, shallowObjectEq)
 				const peerItemChange = perKeyItemChanges.find(peerItemChange => {
 					const peerItem = added ? peerItemChange.newItem : peerItemChange.oldItem
 					return peerItemChange.table === relationship.peerTable && peerItem !== undefined &&
-						getItemKeyPointer(peerItemChange.table, peerItem, relationship.compositeKeySeparator) === changedPointer
+						shallowObjectEq(getItemKey(peerItemChange.table, peerItem), changedForeignKey)
 				})
 				if (peerItemChange === undefined) throw mkError()
-				if (doesPeerPointBack(relationship, peerItemChange, itemKeyPointer) !== added) throw mkError()
+				if (doesPeerPointBack(relationship, peerItemChange, itemKey) !== added) throw mkError()
 			})
 		})
 	})
 }
 
-export function getExistingPointers(relationship: TableRelationship, itemChange: PerKeyItemChange): Array<string | number> {
-	if (itemChange.oldItem === undefined) {
+export function getForeignKeys(fnc: (item: Record<string, any>) => OneOrArray<Record<string, any>>, item: Record<string, any> | undefined): Array<Record<string, any>> {
+	if (item === undefined) {
 		return []
 	} else {
-		if ([TableRelationshipType.ONE_TO_ONE, TableRelationshipType.MANY_TO_ONE].includes(relationship.type)) {
-			return [itemChange.oldItem[relationship.pointerAttributeName] as string | number]
-		} else {
-			return itemChange.oldItem[relationship.pointerAttributeName] as Array<string | number>
-		}
+		const foreignKeys = fnc(item)
+		return Array.isArray(foreignKeys) ? foreignKeys : [foreignKeys]
 	}
 }
 
-export function getLatestPointers(relationship: TableRelationship, itemChange: PerKeyItemChange): Array<string | number> {
-	if (itemChange.newItem === undefined) {
-		return []
-	} else {
-		if ([TableRelationshipType.ONE_TO_ONE, TableRelationshipType.MANY_TO_ONE].includes(relationship.type)) {
-			return [itemChange.newItem[relationship.pointerAttributeName] as string | number]
-		} else {
-			return itemChange.newItem[relationship.pointerAttributeName] as Array<string | number>
-		}
-	}
-}
-
-export function doesPeerPointBack(relationship: TableRelationship, peerItemChange: PerKeyItemChange,
-		itemKeyPointer: string | number): boolean {
-	if (peerItemChange.newItem === undefined) {
-		return false
-	} else {
-		if ([TableRelationshipType.ONE_TO_ONE, TableRelationshipType.ONE_TO_MANY].includes(relationship.type)) {
-			return peerItemChange.newItem[relationship.peerPointerAttributeName] === itemKeyPointer
-		} else {
-			return peerItemChange.newItem[relationship.peerPointerAttributeName].includes(itemKeyPointer)
-		}
-	}
-}
-
-export function shallowCloneObjectAndDirectArrays<T extends Record<string, any>>(obj: T): T {
-	return {
-		...(Object.fromEntries(Object.entries(obj).map(entry => Array.isArray(entry) ? [...entry] : entry)))
-	} as T
+export function doesPeerPointBack(relationship: TableRelationship<any>, peerItemChange: PerKeyItemChange,
+		itemKey: Record<string, any>): boolean {
+	const foreignKeys = getForeignKeys(relationship.peerItemForeignKeys, peerItemChange.newItem)
+	return includes(foreignKeys, itemKey, shallowObjectEq)
 }
 
 export function optimusCommitItemsToPerKeyItemChanges(recordedItems: WeakMap<Record<string, any>, ItemData>,
@@ -320,6 +284,17 @@ export function filterUnique<T>(array: Array<T>, eq: (a: T, b: T) => boolean): A
 
 export function itemKeyEq(table: Table<any, any, any>, a: Record<string, any>, b: Record<string, any>): boolean {
 	return table.keyAttributeNames.filter(keyAttrName => a[keyAttrName] !== b[keyAttrName]).length === 0
+}
+
+export function includes<T>(array: Array<T>, target: T, eq: (a: T, b: T) => boolean): boolean {
+	return array.find(child => eq(child, target)) !== undefined
+}
+
+export function shallowObjectEq(a: Record<string, any>, b: Record<string, any>) {
+	const aKeys = Object.keys(a)
+	const bKeys = Object.keys(b)
+	if (aKeys.length !== bKeys.length) return false
+	return aKeys.every(key => a[key] === b[key])
 }
 
 export function zodValidate<T extends z.ZodTypeAny>(schema: T, data: any, errorMapping?: (e: z.ZodError) => Error): z.infer<T> {

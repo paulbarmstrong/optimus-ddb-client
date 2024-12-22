@@ -5,8 +5,9 @@ import * as z from "zod"
 import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion, 
 	NonStripZodObject} from "../Types"
-import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeySchema, getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit, 
-	zodValidate} from "../Utilities"
+import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeySchema,
+	getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, validateRelationshipsOnCommit, 
+	zodValidate } from "../Utilities"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
 import { SortKeyCondition, UnprocessedKeysError } from "../Types"
@@ -386,7 +387,7 @@ export class OptimusDdbClient {
 			} else {
 				itemData.version = keyChanged ? 0 : itemData.version + 1
 			}
-			itemData.existingItem = shallowCloneObjectAndDirectArrays(item)
+			itemData.existingItem = structuredClone(item)
 			if (itemData.delete) this.#recordedItems.delete(item)
 		})
 	}
@@ -416,7 +417,7 @@ export class OptimusDdbClient {
 		zodValidate(table.itemSchema, item, e => new ItemValidationError(e))
 		this.#recordedItems.set(item, {
 			table: table,
-			existingItem: shallowCloneObjectAndDirectArrays(item),
+			existingItem: structuredClone(item),
 			version: version,
 			delete: false,
 			create: create

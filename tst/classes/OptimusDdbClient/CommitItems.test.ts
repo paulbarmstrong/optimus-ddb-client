@@ -556,9 +556,9 @@ describe("regular ONE_TO_ONE relationship", () => {
 	})
 	usersTable.addRelationship({
 		type: TableRelationshipType.ONE_TO_ONE,
-		pointerAttributeName: "alias",
 		peerTable: aliasesTable,
-		peerPointerAttributeName: "userId"
+		itemForeignKeys: user => ({ id: user.alias }),
+		peerItemForeignKeys: alias => ({ id: alias.userId })
 	})
 	test("create without peer", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -759,10 +759,9 @@ describe("composite key table ONE_TO_ONE relationship", () => {
 	})
 	usersTable.addRelationship({
 		type: TableRelationshipType.ONE_TO_ONE,
-		pointerAttributeName: "alias",
 		peerTable: aliasesTable,
-		peerPointerAttributeName: "userId",
-		compositeKeySeparator: ""
+		itemForeignKeys: user => ({ firstLetter: user.alias.substring(0, 1), ending: user.alias.substring(1) }),
+		peerItemForeignKeys: alias => ({ id: alias.userId })
 	})
 	test("creating and switching peers", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([aliasesTable, usersTable], [])
@@ -831,9 +830,9 @@ describe("regular MANY_TO_MANY relationship", () => {
 	})
 	usersTable.addRelationship({
 		type: TableRelationshipType.MANY_TO_MANY,
-		pointerAttributeName: "resourceIds",
 		peerTable: resourcesTable,
-		peerPointerAttributeName: "sharedUserIds"
+		itemForeignKeys: user => user.resourceIds.map(resourceId => ({ id: resourceId })),
+		peerItemForeignKeys: resource => resource.sharedUserIds.map(userId => ({ id: userId }))
 	})
 	test("both created", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([usersTable, resourcesTable], [])
@@ -900,9 +899,9 @@ describe("regular ONE_TO_MANY/MANY_TO_ONE relationship", () => {
 	})
 	forumsTable.addRelationship({
 		type: TableRelationshipType.ONE_TO_MANY,
-		pointerAttributeName: "commentIds",
 		peerTable: commentsTable,
-		peerPointerAttributeName: "forumId"
+		itemForeignKeys: forum => forum.commentIds.map(x => ({ id: x })),
+		peerItemForeignKeys: comment => ({ id: comment.forumId })
 	})
 	test("create comment without forum pointing to it", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([forumsTable, commentsTable], [])

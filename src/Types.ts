@@ -82,21 +82,20 @@ export type FlipTableRelationshipType<RT> =
 	RT
 
 /** @hidden */
-export type TableRelationship = {
-	type: TableRelationshipType,
-	pointerAttributeName: string,
+export type TableRelationship<RT extends TableRelationshipType> = {
+	type: RT,
 	peerTable: Table<any, any, any>,
-	peerPointerAttributeName: string,
-	compositeKeySeparator: string,
+	itemForeignKeys: (item: any) => TableRelationshipForeignKeyPlurality<RT, Record<string, any>>,
+	peerItemForeignKeys: (item: any) => TableRelationshipForeignKeyPlurality<FlipTableRelationshipType<RT>, Record<string, any>>,
 	itemExemption?: (item: any) => boolean,
 	peerItemExemption?: (item: any) => boolean
 }
 
 /** @hidden */
-export type TableRelationshipTypeToAttType<RT> = RT extends (TableRelationshipType.ONE_TO_ONE | TableRelationshipType.MANY_TO_ONE) ? (
-	string | number
+export type TableRelationshipForeignKeyPlurality<RT, T> = RT extends (TableRelationshipType.ONE_TO_ONE | TableRelationshipType.MANY_TO_ONE) ? (
+	T
 ) : (
-	Array<string | number>
+	Array<T>
 )
 
 /**
@@ -216,3 +215,5 @@ export type PerKeyItemChange = {
 }
 
 export type NonStripZodObject = z.ZodObject<any, "strict" | "passthrough">
+
+export type OneOrArray<T> = T | Array<T>

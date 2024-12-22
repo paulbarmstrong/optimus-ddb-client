@@ -14,6 +14,12 @@ OptimusDdbClient is a TypeScript/JavaScript DynamoDB client with the following a
 
 1. Any existing items of tables to be used with OptimusDdbClient should have an N attribute to use for optimistic locking. It should be specified in the `Table` constructor's `versionAttribute` parameter. The default is "version".
 
+### 2.x.x major version breaking changes
+ * Switch from shape-tape to zod
+ * Rename itemShape to itemSchema, ItemShapeValidationError to ItemValidationError
+ * Change to more flexible way of defining table relationship foreign keys
+ * Start depending on [structuredClone](https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone)
+
 ### Installation
 ```
 npm install optimus-ddb-client zod
