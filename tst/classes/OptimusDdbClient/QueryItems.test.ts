@@ -448,7 +448,7 @@ test("incomplete item in GSI", async () => {
 	])
 })
 
-describe("Table with UnionShape itemShape", () => {
+describe("Table with union itemSchema", () => {
 	const resourceEventsTableCommentGsi = new Gsi({
 		table: resourceEventsTable,
 		partitionKey: "type",

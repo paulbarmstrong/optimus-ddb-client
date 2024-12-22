@@ -15,7 +15,7 @@ This is low level documentation. Please see [README.md](../README.md) for the hi
 - [Gsi](classes/Gsi.md)
 - [InvalidResumeKeyError](classes/InvalidResumeKeyError.md)
 - [ItemNotFoundError](classes/ItemNotFoundError.md)
-- [ItemShapeValidationError](classes/ItemShapeValidationError.md)
+- [ItemValidationError](classes/ItemValidationError.md)
 - [OptimisticLockError](classes/OptimisticLockError.md)
 - [OptimusDdbClient](classes/OptimusDdbClient.md)
 - [Table](classes/Table.md)

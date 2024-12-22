@@ -2,11 +2,10 @@ import { DynamoDBClient, DynamoDBClientConfig, TransactionCanceledException } fr
 import { DynamoDBDocumentClient, GetCommand, BatchGetCommand, TransactWriteCommand, ScanCommand, QueryCommand, QueryCommandInput,
 	ScanCommandInput,  QueryCommandOutput, ScanCommandOutput} from "@aws-sdk/lib-dynamodb"
 import * as z from "zod"
-import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemShapeValidationError, ItemWithoutVersionError, 
+import { AnyToNever, FilterCondition, InvalidResumeKeyError, ItemNotFoundError, ItemValidationError, ItemWithoutVersionError, 
 	OptimisticLockError, PartitionKeyCondition, MergeUnion, 
 	NonStripZodObject} from "../Types"
-import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable,
-	getLastEvaluatedKeyShape, getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit, 
+import { decodeResumeKey, encodeResumeKey, getDynamoDbExpression, getIndexTable, getLastEvaluatedKeySchema, getUpdateDynamoDbExpression, isGsi, itemKeyEq, optimusCommitItemsToPerKeyItemChanges, shallowCloneObjectAndDirectArrays, validateRelationshipsOnCommit, 
 	zodValidate} from "../Utilities"
 import { Table } from "./Table"
 import { Gsi } from "./Gsi"
@@ -56,7 +55,7 @@ export class OptimusDdbClient {
 	 * created in DynamoDB once it is included in the `items` of a call to `commitItems`.
 	 * 
 	 * @returns The drafted item.
-	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
+	 * @throws ItemValidationError if the item does not match the Table's `itemSchema`.
 	 */
 	draftItem<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>, S extends keyof z.infer<I>, 
 			T extends z.infer<I>>(params: {
@@ -88,7 +87,7 @@ export class OptimusDdbClient {
 	 * @returns The item with the given key (or `undefined` if the item is not found and 
 	 * `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
 	 * @throws ItemNotFoundError if the item is not found (and `itemNotFoundErrorOverride` is not set).
-	 * @throws ItemShapeValidationError if the item does not match the Table's `itemShape`.
+	 * @throws ItemValidationError if the item does not match the Table's `itemSchema`.
 	 */
 	async getItem<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>,
 			S extends keyof z.infer<I>, E extends Error | undefined = Error>(params: {
@@ -134,7 +133,7 @@ export class OptimusDdbClient {
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem.
 	 * @throws ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOverride` is not set).
-	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 * @throws ItemValidationError if an item does not match the Table's `itemSchema`.
 	 */
 	async getItems<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>,
 			S extends keyof z.infer<I>>(params: {
@@ -193,7 +192,7 @@ export class OptimusDdbClient {
 	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html) as many times as necessary to hit the 
 	 * specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
 	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it queries items from GSIs 
-	 * that don't project the attributes defined by the Table's itemShape.
+	 * that don't project the attributes defined by the Table's itemSchema.
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
@@ -203,8 +202,8 @@ export class OptimusDdbClient {
 	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
-	 * by the Table's itemShape).
-	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 * by the Table's itemSchema).
+	 * @throws ItemValidationError if an item does not match the Table's `itemSchema`.
 	 */
 	async queryItems<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof MergeUnion<z.infer<I>>, 
 			S extends keyof MergeUnion<z.infer<I>>, L extends number | undefined = undefined>(params: {
@@ -251,7 +250,7 @@ export class OptimusDdbClient {
 	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html) as many times as necessary to hit the 
 	 * specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
 	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans items from GSIs
-	 * that don't project the attributes defined by the Table's itemShape.
+	 * that don't project the attributes defined by the Table's itemSchema.
 	 * 
 	 * @returns A tuple:
 	 * * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
@@ -261,8 +260,8 @@ export class OptimusDdbClient {
 	 * @throws InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 	 * @throws UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 	 * keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
-	 * by the Table's itemShape).
-	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 * by the Table's itemSchema).
+	 * @throws ItemValidationError if an item does not match the Table's `itemSchema`.
 	 */
 	async scanItems<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof MergeUnion<z.infer<I>>, 
 			S extends keyof MergeUnion<z.infer<I>>, L extends number | undefined = undefined>(params: {
@@ -299,7 +298,7 @@ export class OptimusDdbClient {
 	 * Commits items together in a transaction. It calls [the TransactWriteItems DynamoDB API](
 	 * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html).
 	 * 
-	 * @throws ItemShapeValidationError if an item does not match the Table's `itemShape`.
+	 * @throws ItemValidationError if an item does not match the Table's `itemSchema`.
 	 * @throws OptimisticLockError if the transaction is cancelled due to a conditional check failure.
 	 */
 	async commitItems(params: {
@@ -312,7 +311,7 @@ export class OptimusDdbClient {
 		if (params.items.length === 0) return
 		params.items.forEach(item => {
 			if (!this.#recordedItems.has(item)) throw new Error(`Unrecorded item cannot be committed: ${JSON.stringify(item)}`)
-			zodValidate(this.#recordedItems.get(item)!.table.itemShape, item, e => new ItemShapeValidationError(e))
+			zodValidate(this.#recordedItems.get(item)!.table.itemSchema, item, e => new ItemValidationError(e))
 		})
 		const perKeyItemChanges = optimusCommitItemsToPerKeyItemChanges(this.#recordedItems, params.items)
 		validateRelationshipsOnCommit(perKeyItemChanges)
@@ -409,12 +408,12 @@ export class OptimusDdbClient {
 	
 	/** @hidden */
 	#recordAndStripItem<I extends NonStripZodObject| z.ZodUnion<[NonStripZodObject, ...NonStripZodObject[]]>, P extends keyof z.infer<I>, 
-			S extends keyof z.infer<I>>(item: any, table: Table<I,P,S>, create: boolean): z.infer<typeof table.itemShape> {
+			S extends keyof z.infer<I>>(item: any, table: Table<I,P,S>, create: boolean): z.infer<typeof table.itemSchema> {
 		if (!create && !Number.isInteger(item[table.versionAttributeName]))
 			throw new ItemWithoutVersionError(`Found ${table.tableName} item without version attribute "${table.versionAttributeName}": ${JSON.stringify(item)}`)
 		const version = create ? 0 : item[table.versionAttributeName]
 		delete item[table.versionAttributeName]
-		zodValidate(table.itemShape, item, e => new ItemShapeValidationError(e))
+		zodValidate(table.itemSchema, item, e => new ItemValidationError(e))
 		this.#recordedItems.set(item, {
 			table: table,
 			existingItem: shallowCloneObjectAndDirectArrays(item),
@@ -440,7 +439,7 @@ export class OptimusDdbClient {
 			commandInput: params.commandInput,
 			get: params.get,
 			limit: params.limit,
-			lastEvaluatedKey: decodeResumeKey(params.resumeKey, getLastEvaluatedKeyShape(params.index), params.invalidResumeKeyErrorOverride)
+			lastEvaluatedKey: decodeResumeKey(params.resumeKey, getLastEvaluatedKeySchema(params.index), params.invalidResumeKeyErrorOverride)
 		})
 		const items: Array<z.infer<I>> = []
 		while (itemsPagesIterator.hasNext()) {

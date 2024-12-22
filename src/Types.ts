@@ -157,10 +157,10 @@ export class InvalidResumeKeyError extends Error {
 }
 
 /**
- * Error for when OptimusDdbClient encounters an item that does not match its Table's `itemShape`.
+ * Error for when OptimusDdbClient encounters an item that does not match its Table's `itemSchema`.
  */
-export class ItemShapeValidationError extends Error {
-	name = "ItemShapeValidationError"
+export class ItemValidationError extends Error {
+	name = "ItemValidationError"
 	issues: Array<z.ZodIssue>
 	constructor(zodError: z.ZodError) {
 		super(zodError.message)
@@ -196,7 +196,9 @@ export class TableRelationshipAlreadyExistsError extends Error {
 	}
 }
 
-/** @hidden */
+/**
+ * Error for when an item has no version attribute.
+ */
 export class ItemWithoutVersionError extends Error {
 	name = "ItemWithoutVersionError"
 	constructor(message: string) {

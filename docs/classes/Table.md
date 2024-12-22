@@ -5,41 +5,42 @@
 Table represents a DynamoDB Table. It can be created once and then provided to OptimusDdbClient
 when doing operations on items.
 
-#### Regarding `itemShape`
+#### Regarding `itemSchema`
 
-The `itemShape` constructor parameter is a Shape representing the structure of items in the table. The Shape
-should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version
-attribute which is abstracted from OptimusDdbClient consumers.
+The `itemSchema` constructor parameter is a [zod](https://www.npmjs.com/package/zod) schema object
+representing the structure of items in the table. The schema should be a ZodObject (or ZodUnion of
+ZodObjects) including all attributes except for the version attribute which is abstracted from
+OptimusDdbClient consumers. The ZodObject must be "strict" or "passthrough".
 
-The mappings between DynamoDB types and Shapes are as follows:
+The mappings between DynamoDB types and zod schema are as follows:
 
-|DynamoDB Type|Shape class|Shape creation example|
+|DynamoDB Type|Zod schema class|Zod schema creation example|
 |-------------|-----------|-------|
-|S            |StringShape|`s.string()`|
-|N            |NumberShape|`s.number()`|
-|BOOL         |BooleanShape|`s.number()`|
-|B            |ClassShape\<Uint8Array\>|`s.class(Uint8Array)`|
-|M            |ObjectShape|`s.object({})`|
-|L            |ArrayShape|`s.array(s.string())`|
-|NULL         |LiteralShape\<null\>|`s.literal(null)`|
-|(Absent Attribute)|LiteralShape\<undefined\>|`s.literal(undefined)`|
+|S            |ZodString|`z.string()`|
+|N            |ZodNumber|`z.number()`|
+|BOOL         |ZodBoolean|`z.boolean()`|
+|B            |ZodType\<Uint8Array\>|`z.instanceOf(Uint8Array)`|
+|M            |ZodObject|`z.strictObject({})`|
+|L            |ZodArray|`z.array(z.string())`|
+|NULL         |ZodNull|`z.null()`|
+|(Absent Attribute)|ZodUndefined|`z.undefined()`|
 
-An item Shape for a table with items having S attributes "id" and "text" (and N attribute "version" for optimistic 
-locking) might be:
+An itemSchema for a table with items having S attributes "id" and "text" (and N attribute "version"
+for optimistic locking) might be:
 
 ```
-s.object({ id: s.string(), text: s.string() })
+z.strictObject({ id: z.string(), text: z.string() })
 ```
 
-Please see the shape-tape documentation for more details about creating shapes.
+Please see [zod](https://www.npmjs.com/package/zod) for more details about creating itemSchema.
 
 ## Type parameters
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
-| `P` | extends keyof `ShapeToType`\<`I`\> |
-| `S` | extends keyof `ShapeToType`\<`I`\> = `never` |
+| `I` | extends `NonStripZodObject` \| `z.ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
+| `P` | extends keyof `z.infer`\<`I`\> |
+| `S` | extends keyof `z.infer`\<`I`\> = `never` |
 
 ## Table of contents
 
@@ -50,7 +51,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 ### Properties
 
 - [attributeNames](Table.md#attributenames)
-- [itemShape](Table.md#itemshape)
+- [itemSchema](Table.md#itemschema)
 - [keyAttributeNames](Table.md#keyattributenames)
 - [partitionKey](Table.md#partitionkey)
 - [sortKey](Table.md#sortkey)
@@ -75,7 +76,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` = `never` |
 
@@ -84,7 +85,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.itemShape` | `I` | Shape representing the structure of items in the table. Please see the top-level Table class documentation for details. |
+| `params.itemSchema` | `I` | Zod schema representing the structure of items in the table. Please see the Table class documentation for details. |
 | `params.partitionKey` | `P` | The name of the DynamoDB table's partition key. |
 | `params.sortKey?` | `S` | The name of the DynamoDB table's sort key. It must be provided if and only if the table has a sort key. |
 | `params.tableName` | `string` | The TableName of the DynamoDB table. |
@@ -96,7 +97,7 @@ Please see the shape-tape documentation for more details about creating shapes.
 
 #### Defined in
 
-[src/classes/Table.ts:60](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L60)
+[src/classes/Table.ts:62](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L62)
 
 ## Properties
 
@@ -108,19 +109,19 @@ The names of all of the item attributes (except for the version attribute).
 
 #### Defined in
 
-[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L52)
+[src/classes/Table.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L54)
 
 ___
 
-### itemShape
+### itemSchema
 
-• `Readonly` **itemShape**: `I`
+• `Readonly` **itemSchema**: `I`
 
-Shape representing the structure of items in the table. Please see the Table class documentation for details.
+Zod schema representing the structure of items in the table. Please see the Table class documentation for details.
 
 #### Defined in
 
-[src/classes/Table.ts:46](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L46)
+[src/classes/Table.ts:48](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L48)
 
 ___
 
@@ -133,7 +134,7 @@ if the table has a sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:57](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L57)
+[src/classes/Table.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L59)
 
 ___
 
@@ -145,7 +146,7 @@ The name of the DynamoDB table's partition key.
 
 #### Defined in
 
-[src/classes/Table.ts:48](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L48)
+[src/classes/Table.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L50)
 
 ___
 
@@ -157,7 +158,7 @@ The name of the DynamoDB table's sort key or `undefined` if it has no sort key.
 
 #### Defined in
 
-[src/classes/Table.ts:50](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L50)
+[src/classes/Table.ts:52](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L52)
 
 ___
 
@@ -169,7 +170,7 @@ The name of the DynamoDB table.
 
 #### Defined in
 
-[src/classes/Table.ts:44](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L44)
+[src/classes/Table.ts:46](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L46)
 
 ___
 
@@ -181,7 +182,7 @@ The name of the version attribute used for optimistic locking.
 
 #### Defined in
 
-[src/classes/Table.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L59)
+[src/classes/Table.ts:61](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L61)
 
 ## Accessors
 
@@ -198,7 +199,7 @@ corresponding inverted relationship to this Table.
 
 #### Defined in
 
-[src/classes/Table.ts:163](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L163)
+[src/classes/Table.ts:162](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L162)
 
 ## Methods
 
@@ -214,7 +215,7 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 | :------ | :------ |
 | `RT` | extends [`TableRelationshipType`](../enums/TableRelationshipType.md) |
 | `PointerAttributeName` | extends `string` \| `number` \| `symbol` |
-| `I1` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I1` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P1` | extends `string` \| `number` \| `symbol` |
 | `S1` | extends `string` \| `number` \| `symbol` |
 | `PeerPointerAttributeName` | extends `string` \| `number` \| `symbol` |
@@ -225,8 +226,8 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.compositeKeySeparator?` | `string` | The separator used to join the partition key and sort key when one of the Tables has a sort key. |
-| `params.itemExemption?` | (`item`: `ShapeToType`\<`I`\>) => `boolean` | Predicate for when an item should be exempted from the relationship. |
-| `params.peerItemExemption?` | () => `boolean` | Predicate for when an item from the peer Table should be exempted from the relationship. |
+| `params.itemExemption?` | (`item`: `TypeOf`\<`I`\>) => `boolean` | Predicate for when an item should be exempted from the relationship. |
+| `params.peerItemExemption?` | (`item`: `TypeOf`\<`I1`\>) => `boolean` | Predicate for when an item from the peer Table should be exempted from the relationship. |
 | `params.peerPointerAttributeName` | `PeerPointerAttributeName` | The attribute on the peer Table which points to items of this Table. |
 | `params.peerTable` | [`Table`](Table.md)\<`I1`, `P1`, `S1`\> | The other Table in the relationship. |
 | `params.pointerAttributeName` | `PointerAttributeName` | The attribute on this Table which points to items of the peer Table. |
@@ -238,4 +239,4 @@ Add a relationship to the Table. Table relationships are enforced upon OptimusDd
 
 #### Defined in
 
-[src/classes/Table.ts:105](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L105)
+[src/classes/Table.ts:107](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/Table.ts#L107)

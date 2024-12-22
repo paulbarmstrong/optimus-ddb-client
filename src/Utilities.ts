@@ -5,7 +5,7 @@ import { ConditionCondition, FilterCondition, InvalidResumeKeyError, PartitionKe
 	TableRelationshipType,
 	TableRelationship,
 	PerKeyItemChange,
-	ItemShapeValidationError,
+	ItemValidationError,
 	NonStripZodObject} from "./Types"
 import * as z from "zod"
 import { Table } from "./classes/Table"
@@ -117,12 +117,12 @@ export function encodeResumeKey<T extends Record<string, any>>(lastEvaluatedKey:
 	return JSON.stringify(lastEvaluatedKey)
 }
 
-export function decodeResumeKey<T extends z.ZodTypeAny>(resumeKey: string | undefined, keyShape: T,
+export function decodeResumeKey<T extends z.ZodTypeAny>(resumeKey: string | undefined, keySchema: T,
 		invalidResumeKeyErrorOverride?: (e: InvalidResumeKeyError) => Error)
-		: z.infer<typeof keyShape> | undefined {
+		: z.infer<typeof keySchema> | undefined {
 	if (resumeKey === undefined) return undefined
 	try {
-		return zodValidate(keyShape, JSON.parse(resumeKey))
+		return zodValidate(keySchema, JSON.parse(resumeKey))
 	} catch (error) {
 		if (invalidResumeKeyErrorOverride !== undefined) {
 			throw invalidResumeKeyErrorOverride(new InvalidResumeKeyError())
@@ -132,20 +132,20 @@ export function decodeResumeKey<T extends z.ZodTypeAny>(resumeKey: string | unde
 	}
 }
 
-export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any,any>): z.ZodTypeAny {
+export function getLastEvaluatedKeySchema(index: Table<any,any,any> | Gsi<any,any,any>): z.ZodTypeAny {
 	const table = getIndexTable(index)
 	return z.strictObject({
-		[table.partitionKey]: getItemShapePropertyValueShape(table, table.partitionKey),
+		[table.partitionKey]: getItemSchemaPropertyValueSchema(table, table.partitionKey),
 		...(table.sortKey !== undefined ? (
-			{ [table.sortKey]: getItemShapePropertyValueShape(table, table.sortKey) }
+			{ [table.sortKey]: getItemSchemaPropertyValueSchema(table, table.sortKey) }
 		) : (
 			{}
 		)),
 		...(isGsi(index) ? (
 			{
-				[index.partitionKey]: getItemShapePropertyValueShape(table, index.partitionKey),
+				[index.partitionKey]: getItemSchemaPropertyValueSchema(table, index.partitionKey),
 				...(index.sortKey !== undefined ? (
-					{ [index.sortKey]: getItemShapePropertyValueShape(table, index.sortKey) }
+					{ [index.sortKey]: getItemSchemaPropertyValueSchema(table, index.sortKey) }
 				) : (
 					{}
 				))
@@ -156,11 +156,11 @@ export function getLastEvaluatedKeyShape(index: Table<any,any,any> | Gsi<any,any
 	})
 }
 
-function getItemShapePropertyValueShape(table: Table<any,any,any>, attributeName: string): z.ZodTypeAny {
-	if (table.itemShape.shape !== undefined) {
-		return table.itemShape.shape[attributeName]
+function getItemSchemaPropertyValueSchema(table: Table<any,any,any>, attributeName: string): z.ZodTypeAny {
+	if (table.itemSchema.shape !== undefined) {
+		return table.itemSchema.shape[attributeName]
 	} else {
-		const specificMembers: Array<z.ZodTypeAny> = (table.itemShape.options as Array<NonStripZodObject>)
+		const specificMembers: Array<z.ZodTypeAny> = (table.itemSchema.options as Array<NonStripZodObject>)
 			.filter(member => Object.keys(member.shape).includes(attributeName))
 			.map(member => member.shape[attributeName])
 		return z.union(specificMembers as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])

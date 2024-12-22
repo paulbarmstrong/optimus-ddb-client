@@ -50,7 +50,7 @@ and those are mentioned on each function documentation.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:40](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L40)
+[src/classes/OptimusDdbClient.ts:41](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L41)
 
 ## Methods
 
@@ -75,7 +75,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWrite
 
 **`Throws`**
 
-ItemShapeValidationError if an item does not match the Table's `itemShape`.
+ItemValidationError if an item does not match the Table's `itemSchema`.
 
 **`Throws`**
 
@@ -83,7 +83,7 @@ OptimisticLockError if the transaction is cancelled due to a conditional check f
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:303](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L303)
+[src/classes/OptimusDdbClient.ts:304](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L304)
 
 ___
 
@@ -98,10 +98,10 @@ created in DynamoDB once it is included in the `items` of a call to `commitItems
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
-| `T` | extends {} \| {} |
+| `T` | extends `Object` |
 
 #### Parameters
 
@@ -119,17 +119,17 @@ The drafted item.
 
 **`Throws`**
 
-ItemShapeValidationError if the item does not match the Table's `itemShape`.
+ItemValidationError if the item does not match the Table's `itemSchema`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:59](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L59)
+[src/classes/OptimusDdbClient.ts:60](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L60)
 
 ___
 
 ### getItem
 
-▸ **getItem**\<`I`, `P`, `S`, `E`\>(`params`): `Promise`\<`E` extends `Error` ? `ShapeToType`\<`I`\> : `undefined` \| `ShapeToType`\<`I`\>\>
+▸ **getItem**\<`I`, `P`, `S`, `E`\>(`params`): `Promise`\<`E` extends `Error` ? `TypeOf`\<`I`\> : `undefined` \| `TypeOf`\<`I`\>\>
 
 Gets an item from the given Table with the given key. It calls [the GetItem DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html).
@@ -138,7 +138,7 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html)
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `E` | extends `undefined` \| `Error` = `Error` |
@@ -149,12 +149,12 @@ https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html)
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.itemNotFoundErrorOverride?` | (`e`: [`ItemNotFoundError`](ItemNotFoundError.md)) => `E` | Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItem` will throw that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItem` will return `undefined` instead of throwing `ItemNotFoundError`. |
-| `params.key` | \{ [T in string \| number \| symbol]: ShapeToType\<I\>[P] } & \{ [T in string \| number \| symbol]: ShapeToType\<I\>[S] } | Key to look up. |
+| `params.key` | \{ [T in string \| number \| symbol]: TypeOf\<I\>[P] } & \{ [T in string \| number \| symbol]: TypeOf\<I\>[S] } | Key to look up. |
 | `params.table` | [`Table`](Table.md)\<`I`, `P`, `S`\> | Table to look in. |
 
 #### Returns
 
-`Promise`\<`E` extends `Error` ? `ShapeToType`\<`I`\> : `undefined` \| `ShapeToType`\<`I`\>\>
+`Promise`\<`E` extends `Error` ? `TypeOf`\<`I`\> : `undefined` \| `TypeOf`\<`I`\>\>
 
 The item with the given key (or `undefined` if the item is not found and 
 `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
@@ -165,11 +165,11 @@ ItemNotFoundError if the item is not found (and `itemNotFoundErrorOverride` is n
 
 **`Throws`**
 
-ItemShapeValidationError if the item does not match the Table's `itemShape`.
+ItemValidationError if the item does not match the Table's `itemSchema`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:91](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L91)
+[src/classes/OptimusDdbClient.ts:92](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L92)
 
 ___
 
@@ -194,13 +194,13 @@ The item's optimistic locking version number.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:402](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L402)
+[src/classes/OptimusDdbClient.ts:399](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L399)
 
 ___
 
 ### getItems
 
-▸ **getItems**\<`I`, `P`, `S`\>(`params`): `Promise`\<`ShapeToType`\<`I`\>[]\>
+▸ **getItems**\<`I`, `P`, `S`\>(`params`): `Promise`\<`TypeOf`\<`I`\>[]\>
 
 Gets items from the given Table with the given keys. It calls [the BatchGetItem DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) as many times as
@@ -210,7 +210,7 @@ necessary to get all the requested items.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 
@@ -220,12 +220,12 @@ necessary to get all the requested items.
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
 | `params.itemNotFoundErrorOverride?` | (`e`: [`ItemNotFoundError`](ItemNotFoundError.md)) => `undefined` \| `Error` | Optional parameter to override `ItemNotFoundError`. If it returns `Error` then `getItems` will throw that error instead of `ItemNotFoundError`. If it returns `undefined` then `getItems` will omit the item from its response instead of throwing `ItemNotFoundError`. |
-| `params.keys` | \{ [T in string \| number \| symbol]: ShapeToType\<I\>[P] } & \{ [T in string \| number \| symbol]: ShapeToType\<I\>[S] }[] | Keys to look up. |
+| `params.keys` | \{ [T in string \| number \| symbol]: TypeOf\<I\>[P] } & \{ [T in string \| number \| symbol]: TypeOf\<I\>[S] }[] | Keys to look up. |
 | `params.table` | [`Table`](Table.md)\<`I`, `P`, `S`\> | Table to look in. |
 
 #### Returns
 
-`Promise`\<`ShapeToType`\<`I`\>[]\>
+`Promise`\<`TypeOf`\<`I`\>[]\>
 
 All of the items with the given keys (or just the items that were found if 
 `itemNotFoundErrorOverride` is set to a function that returns `undefined`).
@@ -241,11 +241,11 @@ ItemNotFoundError if one or more items are not found (and `itemNotFoundErrorOver
 
 **`Throws`**
 
-ItemShapeValidationError if an item does not match the Table's `itemShape`.
+ItemValidationError if an item does not match the Table's `itemSchema`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:137](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L137)
+[src/classes/OptimusDdbClient.ts:138](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L138)
 
 ___
 
@@ -269,25 +269,25 @@ deleted in DynamoDB once it is included in the `items` of a call to `commitItems
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:73](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L73)
+[src/classes/OptimusDdbClient.ts:74](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L74)
 
 ___
 
 ### queryItems
 
-▸ **queryItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+▸ **queryItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`TypeOf`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Querys items on the given Table or Gsi with the given conditions. It calls [the Query DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html) as many times as necessary to hit the 
 specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it queries items from GSIs 
-that don't project the attributes defined by the Table's itemShape.
+that don't project the attributes defined by the Table's itemSchema.
 
 #### Type parameters
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `L` | extends `undefined` \| `number` = `undefined` |
@@ -297,18 +297,18 @@ that don't project the attributes defined by the Table's itemShape.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.filterCondition?` | [`FilterCondition`](../index.md#filtercondition)\<`Omit`\<`Omit`\<`MergeUnion`\<`ShapeToType`\<`I`\>\>, `P`\>, `S`\>\> | Optional condition to filter items during the query. |
+| `params.filterCondition?` | [`FilterCondition`](../index.md#filtercondition)\<`Omit`\<`Omit`\<`MergeUnion`\<`TypeOf`\<`I`\>\>, `P`\>, `S`\>\> | Optional condition to filter items during the query. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to query. |
 | `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
-| `params.partitionKeyCondition` | [`PartitionKeyCondition`](../index.md#partitionkeycondition)\<`P`, `ShapeToType`\<`I`\>[`P`]\> | Condition to specify which partition the Query will take place in. |
+| `params.partitionKeyCondition` | [`PartitionKeyCondition`](../index.md#partitionkeycondition)\<`P`, `TypeOf`\<`I`\>[`P`]\> | Condition to specify which partition the Query will take place in. |
 | `params.resumeKey?` | `string` | Optional parameter to continue based on a `resumeKey` returned from an earlier `queryItems` call. |
 | `params.scanIndexForward?` | `boolean` | Optional parameter used to switch the order of the query. |
-| `params.sortKeyCondition?` | `AnyToNever`\<`MergeUnion`\<`ShapeToType`\<`I`\>\>[`S`]\> extends `never` ? `never` : [`SortKeyCondition`](../index.md#sortkeycondition)\<`S`, `MergeUnion`\<`ShapeToType`\<`I`\>\>[`S`]\> | Optional condition to specify how the partition will be queried. |
+| `params.sortKeyCondition?` | `AnyToNever`\<`MergeUnion`\<`TypeOf`\<`I`\>\>[`S`]\> extends `never` ? `never` : [`SortKeyCondition`](../index.md#sortkeycondition)\<`S`, `MergeUnion`\<`TypeOf`\<`I`\>\>[`S`]\> | Optional condition to specify how the partition will be queried. |
 
 #### Returns
 
-`Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+`Promise`\<[`TypeOf`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 A tuple:
 * [0] All of the items that could be queried with the conditions up to the `limit` (if set).
@@ -324,33 +324,33 @@ InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 
 UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
-by the Table's itemShape).
+by the Table's itemSchema).
 
 **`Throws`**
 
-ItemShapeValidationError if an item does not match the Table's `itemShape`.
+ItemValidationError if an item does not match the Table's `itemSchema`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:207](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L207)
+[src/classes/OptimusDdbClient.ts:208](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L208)
 
 ___
 
 ### scanItems
 
-▸ **scanItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+▸ **scanItems**\<`I`, `P`, `S`, `L`\>(`params`): `Promise`\<[`TypeOf`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 Scans items on the given Table or Gsi with the given conditions. It calls [the Scan DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html) as many times as necessary to hit the 
 specified limit or hit the end of the index. It may also call [the BatchGetItem DynamoDB API](
 https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html) when it scans items from GSIs
-that don't project the attributes defined by the Table's itemShape.
+that don't project the attributes defined by the Table's itemSchema.
 
 #### Type parameters
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` |
 | `L` | extends `undefined` \| `number` = `undefined` |
@@ -360,7 +360,7 @@ that don't project the attributes defined by the Table's itemShape.
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `params` | `Object` | - |
-| `params.filterCondition?` | [`FilterCondition`](../index.md#filtercondition)\<`MergeUnion`\<`ShapeToType`\<`I`\>\>\> | Optional condition to filter items during the scan. |
+| `params.filterCondition?` | [`FilterCondition`](../index.md#filtercondition)\<`MergeUnion`\<`TypeOf`\<`I`\>\>\> | Optional condition to filter items during the scan. |
 | `params.index` | [`Table`](Table.md)\<`I`, `P`, `S`\> \| [`Gsi`](Gsi.md)\<`I`, `P`, `S`\> | The table or GSI to scan. |
 | `params.invalidResumeKeyErrorOverride?` | (`e`: [`InvalidResumeKeyError`](InvalidResumeKeyError.md)) => `Error` | Optional parameter to override `InvalidResumeKeyError`. |
 | `params.limit?` | `L` | Optional limit on the number of items to find before returning. |
@@ -368,7 +368,7 @@ that don't project the attributes defined by the Table's itemShape.
 
 #### Returns
 
-`Promise`\<[`ShapeToType`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
+`Promise`\<[`TypeOf`\<`I`\>[], `L` extends `number` ? `undefined` \| `string` : `undefined`]\>
 
 A tuple:
 * [0] All of the items that could be scanned with the conditions up to the `limit` (if set).
@@ -384,12 +384,12 @@ InvalidResumeKeyError if the `resumeKey` parameter is invalid.
 
 UnprocessedKeysError when OptimusDdbClient is unable to get DynamoDB to process one or more
 keys while it is calling BatchGetItem (only relevant for GSIs that don't project the attributes defined
-by the Table's itemShape).
+by the Table's itemSchema).
 
 **`Throws`**
 
-ItemShapeValidationError if an item does not match the Table's `itemShape`.
+ItemValidationError if an item does not match the Table's `itemSchema`.
 
 #### Defined in
 
-[src/classes/OptimusDdbClient.ts:265](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L265)
+[src/classes/OptimusDdbClient.ts:266](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/classes/OptimusDdbClient.ts#L266)

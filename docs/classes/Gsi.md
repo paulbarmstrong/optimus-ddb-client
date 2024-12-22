@@ -9,9 +9,9 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
-| `P` | extends keyof `MergeUnion`\<`ShapeToType`\<`I`\>\> |
-| `S` | extends keyof `MergeUnion`\<`ShapeToType`\<`I`\>\> = `never` |
+| `I` | extends `NonStripZodObject` \| `z.ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
+| `P` | extends keyof `MergeUnion`\<`z.infer`\<`I`\>\> |
+| `S` | extends keyof `MergeUnion`\<`z.infer`\<`I`\>\> = `never` |
 
 ## Table of contents
 
@@ -36,7 +36,7 @@ provided to OptimusDdbClient when doing query and scan operations.
 
 | Name | Type |
 | :------ | :------ |
-| `I` | extends `ObjectShape`\<`any`, `any`\> \| `UnionShape`\<`ObjectShape`\<`any`, `any`\>[]\> |
+| `I` | extends `NonStripZodObject` \| `ZodUnion`\<[`NonStripZodObject`, ...NonStripZodObject[]]\> |
 | `P` | extends `string` \| `number` \| `symbol` |
 | `S` | extends `string` \| `number` \| `symbol` = `never` |
 

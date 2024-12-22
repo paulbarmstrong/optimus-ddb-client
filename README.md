@@ -16,32 +16,32 @@ OptimusDdbClient is a TypeScript/JavaScript DynamoDB client with the following a
 
 ### Installation
 ```
-npm install optimus-ddb-client shape-tape
+npm install optimus-ddb-client zod
 ```
-`shape-tape` is a peer dependency of `optimus-ddb-client`
+[`zod`](https://www.npmjs.com/package/zod) is a peer dependency of `optimus-ddb-client`
 
 ### Usage
 ```javascript
 import { Table, OptimusDdbClient } from "optimus-ddb-client"
-import { s } from "shape-tape"
+import * as z from "zod"
 
 // Create Table class instances based on your DynamoDB tables.
 const blogPostsTable = new Table({
 	tableName: "BlogPosts",
-	itemShape: s.object({
-		id: s.string(),
-		name: s.string(),
-		content: s.string(),
-		numComments: s.integer()
+	itemSchema: z.strictObject({
+		id: z.string(),
+		name: z.string(),
+		content: z.string(),
+		numComments: z.number().int()
 	}),
 	partitionKey: "id"
 })
 const commentsTable = new Table({
 	tableName: "Comments",
-	itemShape: s.object({
-		blogPostId: s.string(),
-		id: s.string(),
-		content: s.string()
+	itemSchema: z.strictObject({
+		blogPostId: z.string(),
+		id: z.string(),
+		content: z.string()
 	}),
 	partitionKey: "blogPostId",
 	sortKey: "id"
@@ -78,11 +78,11 @@ async function handleCreateBlogPostComment(blogPostId, commentContent) {
 }
 ```
 
-If you're using TypeScript you can get named types for your items.
+In TypeScript use zod's infer function to get a named type for your items
 ```typescript
-import { ShapeToType } from "shape-tape"
+import * as z from "zod"
 
-type BlogPost = ShapeToType<typeof blogPostsTable.itemShape>
+type BlogPost = z.infer<typeof blogPostsTable.itemSchema>
 const blogPost: BlogPost = await optimus.getItem({
 	table: blogPostsTable,
 	key: { id: blogPostId }

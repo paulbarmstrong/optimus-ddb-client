@@ -1,7 +1,7 @@
 import { GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { Connection, Resource, connectionsTable, resourceEventsTable, resourcesTable } from "../../test-utilities/Constants"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
-import { ItemShapeValidationError, OptimisticLockError, Table } from "../../../src"
+import { ItemValidationError, OptimisticLockError, Table } from "../../../src"
 import * as z from "zod"
 import { TableRelationshipType, TableRelationshipViolationError } from "../../../src/Types"
 
@@ -255,7 +255,7 @@ test("create, update, and delete at the same time across tables except an optimi
 test("undefined members", async () => {
 	const ticketsTable = new Table({
 		tableName: "Tickets",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			title: z.string(),
 			content: z.optional(z.string()),
@@ -292,7 +292,7 @@ test("undefined members", async () => {
 	})
 })
 
-test("change that violates the shape", async () => {
+test("change that violates the itemSchema", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
 	await ddbDocumentClient.send(new PutCommand({
 		TableName: "Resources",
@@ -300,7 +300,7 @@ test("change that violates the shape", async () => {
 	}))
 	const resource = await optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })
 	resource.status = "starting" as any
-	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
+	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemValidationError)
 })
 
 describe("change item key", () => {
@@ -396,7 +396,7 @@ describe("change item key", () => {
 describe("custom version attribute", () => {
 	const fruitTable = new Table({
 		tableName: "Fruit",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			name: z.string(),
 			quantity: z.number().int()
@@ -404,7 +404,7 @@ describe("custom version attribute", () => {
 		partitionKey: "id",
 		versionAttribute: "_version"
 	})
-	type Fruit = z.infer<typeof fruitTable.itemShape>
+	type Fruit = z.infer<typeof fruitTable.itemSchema>
 	test("create, update, then delete", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([fruitTable], [])
 		const apple: Fruit = optimus.draftItem({
@@ -464,7 +464,7 @@ describe("custom version attribute", () => {
 	})
 })
 
-describe("table with UnionShape itemShape", () => {
+describe("table with union itemSchema", () => {
 	test("regular creates", async () => {
 		const [optimus, ddbDocumentClient] = await prepDdbTest([resourceEventsTable], [])
 		const event0 = optimus.draftItem({
@@ -519,7 +519,7 @@ describe("table with UnionShape itemShape", () => {
 			item: { id: "dddd", type: "new-comment", comment: "hello" }
 		})
 		;(event as any).title = "hello"
-		await expect(optimus.commitItems({ items: [event] })).rejects.toThrow(ItemShapeValidationError)
+		await expect(optimus.commitItems({ items: [event] })).rejects.toThrow(ItemValidationError)
 	})
 })
 
@@ -533,13 +533,13 @@ test("item tries to get committed with extra attribute", async () => {
 	resource.status = "deleted"
 	resource.updatedAt = 1702172271700
 	;(resource as any).telemetryCode = "49838943"
-	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemShapeValidationError)
+	await expect(optimus.commitItems({ items: [resource] })).rejects.toThrow(ItemValidationError)
 })
 
 describe("regular ONE_TO_ONE relationship", () => {
 	const aliasesTable = new Table({
 		tableName: "Aliases",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			firstLetter: z.string(),
 			userId: z.string()
@@ -548,7 +548,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 	})
 	const usersTable = new Table({
 		tableName: "Users",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			alias: z.string()
 		}),
@@ -741,7 +741,7 @@ describe("regular ONE_TO_ONE relationship", () => {
 describe("composite key table ONE_TO_ONE relationship", () => {
 	const aliasesTable = new Table({
 		tableName: "Aliases",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			firstLetter: z.string(),
 			ending: z.string(),
 			userId: z.string()
@@ -751,7 +751,7 @@ describe("composite key table ONE_TO_ONE relationship", () => {
 	})
 	const usersTable = new Table({
 		tableName: "Users",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			alias: z.string()
 		}),
@@ -814,7 +814,7 @@ describe("composite key table ONE_TO_ONE relationship", () => {
 describe("regular MANY_TO_MANY relationship", () => {
 	const usersTable = new Table({
 		tableName: "Users",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			name: z.string(),
 			resourceIds: z.array(z.number().int())
@@ -823,7 +823,7 @@ describe("regular MANY_TO_MANY relationship", () => {
 	})
 	const resourcesTable = new Table({
 		tableName: "Resources",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.number().int(),
 			sharedUserIds: z.array(z.string())
 		}),
@@ -882,7 +882,7 @@ describe("regular MANY_TO_MANY relationship", () => {
 describe("regular ONE_TO_MANY/MANY_TO_ONE relationship", () => {
 	const forumsTable = new Table({
 		tableName: "Forums",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			title: z.string(),
 			commentIds: z.array(z.string())
@@ -891,7 +891,7 @@ describe("regular ONE_TO_MANY/MANY_TO_ONE relationship", () => {
 	})
 	const commentsTable = new Table({
 		tableName: "Comments",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			forumId: z.string(),
 			text: z.string()

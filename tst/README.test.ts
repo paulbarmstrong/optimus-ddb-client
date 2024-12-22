@@ -8,7 +8,7 @@ test("Example from README", async () => {
 	// Create Table class instances based on your DynamoDB tables.
 	const blogPostsTable = new Table({
 		tableName: "BlogPosts",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			id: z.string(),
 			name: z.string(),
 			content: z.string(),
@@ -18,7 +18,7 @@ test("Example from README", async () => {
 	})
 	const commentsTable = new Table({
 		tableName: "Comments",
-		itemShape: z.strictObject({
+		itemSchema: z.strictObject({
 			blogPostId: z.string(),
 			id: z.string(),
 			content: z.string()

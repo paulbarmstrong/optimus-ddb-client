@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { Table } from "../../src"
 
-const fruitShape = z.strictObject({
+const fruitZod = z.strictObject({
 	id: z.string(),
 	state: z.union([z.literal("available"), z.literal("deleted")])
 })
@@ -9,11 +9,11 @@ const fruitShape = z.strictObject({
 test("regular table", () => {
 	const fruitTable = new Table({
 		tableName: "Fruit",
-		itemShape: fruitShape,
+		itemSchema: fruitZod,
 		partitionKey: "id"
 	})
 	expect(fruitTable.attributeNames).toStrictEqual(["id", "state"])
-	expect(fruitTable.itemShape).toStrictEqual(fruitShape)
+	expect(fruitTable.itemSchema).toStrictEqual(fruitZod)
 	expect(fruitTable.keyAttributeNames).toStrictEqual(["id"])
 	expect(fruitTable.partitionKey).toStrictEqual("id")
 	expect(fruitTable.sortKey).toBeUndefined()
@@ -22,20 +22,20 @@ test("regular table", () => {
 })
 
 test("table with sort key and custom version attribute", () => {
-	const documentShape = z.strictObject({
+	const documentZod = z.strictObject({
 		userId: z.string(),
 		id: z.string(),
 		text: z.string()
 	})
 	const documentsTable = new Table({
 		tableName: "Documents",
-		itemShape: documentShape,
+		itemSchema: documentZod,
 		partitionKey: "userId",
 		sortKey: "id",
 		versionAttribute: "_version"
 	})
 	expect(documentsTable.attributeNames).toStrictEqual(["userId", "id", "text"])
-	expect(documentsTable.itemShape).toStrictEqual(documentShape)
+	expect(documentsTable.itemSchema).toStrictEqual(documentZod)
 	expect(documentsTable.keyAttributeNames).toStrictEqual(["userId", "id"])
 	expect(documentsTable.partitionKey).toStrictEqual("userId")
 	expect(documentsTable.sortKey).toStrictEqual("id")
@@ -43,25 +43,25 @@ test("table with sort key and custom version attribute", () => {
 	expect(documentsTable.versionAttributeName).toStrictEqual("_version")
 })
 
-test("with shape including version attribute", () => {
+test("with itemSchema including version attribute", () => {
 	expect(() => {
 		const fruitTable = new Table({
 			tableName: "Fruit",
-			itemShape: z.strictObject({
+			itemSchema: z.strictObject({
 				id: z.string(),
 				state: z.union([z.literal("available"), z.literal("deleted")]),
 				version: z.number()
 			}),
 			partitionKey: "id"
 		})
-	}).toThrow(new Error(`Fruit table's item shape includes reserved version attribute "version".`))
+	}).toThrow(new Error(`Fruit table's itemSchema includes reserved version attribute "version".`))
 })
 
-test("with shape including custom version attribute", () => {
+test("with itemSchema including custom version attribute", () => {
 	expect(() => {
 		const fruitTable = new Table({
 			tableName: "Fruit",
-			itemShape: z.strictObject({
+			itemSchema: z.strictObject({
 				id: z.string(),
 				state: z.union([z.literal("available"), z.literal("deleted")]),
 				optimisticLockVersion: z.number()
@@ -69,11 +69,11 @@ test("with shape including custom version attribute", () => {
 			partitionKey: "id",
 			versionAttribute: "optimisticLockVersion"
 		})
-	}).toThrow(new Error(`Fruit table's item shape includes reserved version attribute "optimisticLockVersion".`))
+	}).toThrow(new Error(`Fruit table's itemSchema includes reserved version attribute "optimisticLockVersion".`))
 })
 
-test("table from UnionShape", () => {
-	const resourceEventShape = z.union([
+test("table from union itemSchema", () => {
+	const resourceEventZod = z.union([
 		z.strictObject({
 			id: z.string(),
 			type: z.literal("title-change"),
@@ -87,11 +87,11 @@ test("table from UnionShape", () => {
 	])
 	const resourceEventsTable = new Table({
 		tableName: "ResourceEvents",
-		itemShape: resourceEventShape,
+		itemSchema: resourceEventZod,
 		partitionKey: "id"
 	})
 	expect(resourceEventsTable.attributeNames).toStrictEqual(["id", "type", "title", "comment"])
-	expect(resourceEventsTable.itemShape).toStrictEqual(resourceEventShape)
+	expect(resourceEventsTable.itemSchema).toStrictEqual(resourceEventZod)
 	expect(resourceEventsTable.keyAttributeNames).toStrictEqual(["id"])
 	expect(resourceEventsTable.partitionKey).toStrictEqual("id")
 	expect(resourceEventsTable.sortKey).toBeUndefined()

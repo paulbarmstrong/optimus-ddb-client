@@ -8,15 +8,16 @@ import { FlipTableRelationshipType, NonStripZodObject, TableRelationship, TableR
  * Table represents a DynamoDB Table. It can be created once and then provided to OptimusDdbClient
  * when doing operations on items.
  * 
- * #### Regarding `itemShape`
+ * #### Regarding `itemSchema`
  * 
- * The `itemShape` constructor parameter is a Shape representing the structure of items in the table. The Shape
- * should be an ObjectShape (or UnionShape of ObjectShapes) including all attributes except for the version
- * attribute which is abstracted from OptimusDdbClient consumers.
+ * The `itemSchema` constructor parameter is a [zod](https://www.npmjs.com/package/zod) schema object
+ * representing the structure of items in the table. The schema should be a ZodObject (or ZodUnion of
+ * ZodObjects) including all attributes except for the version attribute which is abstracted from
+ * OptimusDdbClient consumers. The ZodObject must be "strict" or "passthrough".
  * 
- * The mappings between DynamoDB types and Shapes are as follows:
+ * The mappings between DynamoDB types and zod schema are as follows:
  * 
- * |DynamoDB Type|Shape class|Shape creation example|
+ * |DynamoDB Type|Zod schema class|Zod schema creation example|
  * |-------------|-----------|-------|
  * |S            |ZodString|`z.string()`|
  * |N            |ZodNumber|`z.number()`|
@@ -24,17 +25,17 @@ import { FlipTableRelationshipType, NonStripZodObject, TableRelationship, TableR
  * |B            |ZodType\<Uint8Array\>|`z.instanceOf(Uint8Array)`|
  * |M            |ZodObject|`z.strictObject({})`|
  * |L            |ZodArray|`z.array(z.string())`|
- * |NULL         |ZodNull|`s.null()`|
- * |(Absent Attribute)|LiteralShape\<undefined\>|`s.literal(undefined)`|
+ * |NULL         |ZodNull|`z.null()`|
+ * |(Absent Attribute)|ZodUndefined|`z.undefined()`|
  * 
- * An item Shape for a table with items having S attributes "id" and "text" (and N attribute "version" for optimistic 
- * locking) might be:
+ * An itemSchema for a table with items having S attributes "id" and "text" (and N attribute "version"
+ * for optimistic locking) might be:
  * 
  * ```
  * z.strictObject({ id: z.string(), text: z.string() })
  * ```
  * 
- * Please see the shape-tape documentation for more details about creating shapes.
+ * Please see [zod](https://www.npmjs.com/package/zod) for more details about creating itemSchema.
  * 
  */
 
@@ -43,8 +44,8 @@ export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, 
 	#relationships: Array<TableRelationship>
 	/** The name of the DynamoDB table. */
 	readonly tableName: string
-	/** Shape representing the structure of items in the table. Please see the Table class documentation for details. */
-	readonly itemShape: I
+	/** Zod schema representing the structure of items in the table. Please see the Table class documentation for details. */
+	readonly itemSchema: I
 	/** The name of the DynamoDB table's partition key. */
 	readonly partitionKey: P
 	/** The name of the DynamoDB table's sort key or `undefined` if it has no sort key. */
@@ -61,8 +62,8 @@ export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, 
 	constructor(params: {
 		/** The TableName of the DynamoDB table. */
 		tableName: string,
-		/** Shape representing the structure of items in the table. Please see the top-level Table class documentation for details. */
-		itemShape: I,
+		/** Zod schema representing the structure of items in the table. Please see the Table class documentation for details. */
+		itemSchema: I,
 		/** The name of the DynamoDB table's partition key. */
 		partitionKey: P,
 		/**
@@ -75,13 +76,13 @@ export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, 
 	}) {
 		this.#relationships = []
 		this.tableName = params.tableName
-		this.itemShape = params.itemShape
+		this.itemSchema = params.itemSchema
 		this.partitionKey = params.partitionKey
 		this.sortKey = params.sortKey
-		if ((params.itemShape as z.ZodObject<any>).shape !== undefined) {
-			this.attributeNames = Object.keys((params.itemShape as z.ZodObject<any>).shape)
+		if ((params.itemSchema as z.ZodObject<any>).shape !== undefined) {
+			this.attributeNames = Object.keys((params.itemSchema as z.ZodObject<any>).shape)
 		} else {
-			const attributeNamesNotUnique = (params.itemShape as z.ZodUnion<[z.ZodObject<any>, ...z.ZodObject<any>[]]>)
+			const attributeNamesNotUnique = (params.itemSchema as z.ZodUnion<[z.ZodObject<any>, ...z.ZodObject<any>[]]>)
 				.options.map(x => Object.keys(x.shape)).flat()
 			this.attributeNames = [...new Set(attributeNamesNotUnique)]
 		}
@@ -93,7 +94,7 @@ export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, 
 		this.attributeNames.forEach(attributeName => {
 			if (attributeName === this.versionAttributeName) {
 				throw new Error(`${this.tableName
-					} table's item shape includes reserved version attribute "${
+					} table's itemSchema includes reserved version attribute "${
 					this.versionAttributeName.toString()}".`
 				)
 			}
@@ -124,10 +125,7 @@ export class Table<I extends NonStripZodObject | z.ZodUnion<[NonStripZodObject, 
 		/** Predicate for when an item should be exempted from the relationship. */
 		itemExemption?: (item: z.infer<I>) => boolean,
 		/** Predicate for when an item from the peer Table should be exempted from the relationship. */
-		peerItemExemption?: (
-			/** @hidden */
-			item: z.infer<I1>
-		) => boolean
+		peerItemExemption?: (item: z.infer<I1>) => boolean
 	}) {
 		if (this.#relationships.find(relationship => relationship.peerTable === params.peerTable
 				&& relationship.pointerAttributeName === params.pointerAttributeName) !== undefined) {

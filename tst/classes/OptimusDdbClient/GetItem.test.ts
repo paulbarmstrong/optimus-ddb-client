@@ -2,7 +2,7 @@ import { PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { Connection, MyError, Resource, connectionsTable, resourcesTable } from "../../test-utilities/Constants"
 import { ItemNotFoundError } from "../../../src"
-import { ItemShapeValidationError } from "../../../src/Types"
+import { ItemValidationError } from "../../../src/Types"
 
 describe("non-existent item", () => {
 	test("table without sort key", async () => {
@@ -71,13 +71,13 @@ describe("existing item", () => {
 	})
 })
 
-test("item doesn't match shape", async () => {
+test("item doesn't match itemSchema", async () => {
 	const [optimus, ddbDocumentClient] = await prepDdbTest([resourcesTable], [])
 	await ddbDocumentClient.send(new PutCommand({
 		TableName: "Resources",
 		Item: { id: "bbbb", status: "available", updatedAt: 1702172261700, score: 2322, version: 10 }
 	}))
-	await expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(ItemShapeValidationError)
+	await expect(optimus.getItem({ table: resourcesTable, key: { id: "bbbb" } })).rejects.toThrow(ItemValidationError)
 })
 
 test("item doesn't have version", async () => {

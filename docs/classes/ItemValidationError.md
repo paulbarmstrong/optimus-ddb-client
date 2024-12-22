@@ -1,52 +1,50 @@
-[optimus-ddb-client](../index.md) / TableRelationshipViolationError
+[optimus-ddb-client](../index.md) / ItemValidationError
 
-# Class: TableRelationshipViolationError
+# Class: ItemValidationError
 
-Error for when OptimusDdbClient `commitItems`' items violate a Table relationship.
+Error for when OptimusDdbClient encounters an item that does not match its Table's `itemSchema`.
 
 ## Hierarchy
 
 - `Error`
 
-  ↳ **`TableRelationshipViolationError`**
+  ↳ **`ItemValidationError`**
 
 ## Table of contents
 
 ### Constructors
 
-- [constructor](TableRelationshipViolationError.md#constructor)
+- [constructor](ItemValidationError.md#constructor)
 
 ### Properties
 
-- [cause](TableRelationshipViolationError.md#cause)
-- [message](TableRelationshipViolationError.md#message)
-- [name](TableRelationshipViolationError.md#name)
-- [stack](TableRelationshipViolationError.md#stack)
-- [prepareStackTrace](TableRelationshipViolationError.md#preparestacktrace)
-- [stackTraceLimit](TableRelationshipViolationError.md#stacktracelimit)
+- [cause](ItemValidationError.md#cause)
+- [issues](ItemValidationError.md#issues)
+- [message](ItemValidationError.md#message)
+- [name](ItemValidationError.md#name)
+- [stack](ItemValidationError.md#stack)
+- [prepareStackTrace](ItemValidationError.md#preparestacktrace)
+- [stackTraceLimit](ItemValidationError.md#stacktracelimit)
 
 ### Methods
 
-- [captureStackTrace](TableRelationshipViolationError.md#capturestacktrace)
+- [captureStackTrace](ItemValidationError.md#capturestacktrace)
 
 ## Constructors
 
 ### constructor
 
-• **new TableRelationshipViolationError**(`params`): [`TableRelationshipViolationError`](TableRelationshipViolationError.md)
+• **new ItemValidationError**(`zodError`): [`ItemValidationError`](ItemValidationError.md)
 
 #### Parameters
 
-| Name | Type | Description |
-| :------ | :------ | :------ |
-| `params` | `Object` | - |
-| `params.item` | `Record`\<`string`, `any`\> | Item triggering the Table relationship violation. |
-| `params.tableRelationshipType` | [`TableRelationshipType`](../enums/TableRelationshipType.md) | The type of the TableRelationship. |
-| `params.tables` | [[`Table`](Table.md)\<`any`, `any`, `any`\>, [`Table`](Table.md)\<`any`, `any`, `any`\>] | The tables of the TableRelationship. |
+| Name | Type |
+| :------ | :------ |
+| `zodError` | `ZodError`\<`any`\> |
 
 #### Returns
 
-[`TableRelationshipViolationError`](TableRelationshipViolationError.md)
+[`ItemValidationError`](ItemValidationError.md)
 
 #### Overrides
 
@@ -54,7 +52,7 @@ Error.constructor
 
 #### Defined in
 
-[src/Types.ts:176](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L176)
+[src/Types.ts:165](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L165)
 
 ## Properties
 
@@ -69,6 +67,16 @@ Error.cause
 #### Defined in
 
 node_modules/typescript/lib/lib.es2022.error.d.ts:24
+
+___
+
+### issues
+
+• **issues**: `ZodIssue`[]
+
+#### Defined in
+
+[src/Types.ts:164](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L164)
 
 ___
 
@@ -88,7 +96,7 @@ ___
 
 ### name
 
-• **name**: `string` = `"TableRelationshipViolationError"`
+• **name**: `string` = `"ItemValidationError"`
 
 #### Overrides
 
@@ -96,7 +104,7 @@ Error.name
 
 #### Defined in
 
-[src/Types.ts:175](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L175)
+[src/Types.ts:163](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L163)
 
 ___
 

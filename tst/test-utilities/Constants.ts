@@ -14,28 +14,28 @@ export const DYNAMO_DB_LOCAL_CLIENT_CONFIG: DynamoDBClientConfig = {
 
 export class MyError extends Error {}
 
-export const resourceShape = z.strictObject({
+export const resourceZod = z.strictObject({
 	id: z.string(),
 	status: z.union([z.literal("available"), z.literal("deleted")]),
 	updatedAt: z.number().int()
 })
-export type Resource = z.infer<typeof resourceShape>
+export type Resource = z.infer<typeof resourceZod>
 export const resourcesTable = new Table({
 	tableName: "Resources",
-	itemShape: resourceShape,
+	itemSchema: resourceZod,
 	partitionKey: "id"
 })
 
-export const connectionShape = z.strictObject({
+export const connectionZod = z.strictObject({
 	id: z.string(),
 	resourceId: z.string(),
 	updatedAt: z.number().int(),
 	ttl: z.optional(z.number().int())
 })
-export type Connection = z.infer<typeof connectionShape>
+export type Connection = z.infer<typeof connectionZod>
 export const connectionsTable = new Table({
 	tableName: "Connections",
-	itemShape: connectionShape,
+	itemSchema: connectionZod,
 	partitionKey: "id",
 	sortKey: "resourceId"
 })
@@ -45,16 +45,16 @@ export const connectionsTableResourceIdGsi = new Gsi({
 	partitionKey: "resourceId"
 })
 
-export const livestreamShape = z.strictObject({
+export const livestreamZod = z.strictObject({
 	id: z.string(),
 	category: z.literal("livestreams"),
 	viewerCount: z.number().int().min(0),
 	metadata: z.instanceof(Uint8Array)
 })
-export type Livestream = z.infer<typeof livestreamShape>
+export type Livestream = z.infer<typeof livestreamZod>
 export const livestreamsTable = new Table({
 	tableName: "Livestreams",
-	itemShape: livestreamShape,
+	itemSchema: livestreamZod,
 	partitionKey: "id"
 })
 export const livestreamsTableViewerCountGsi = new Gsi({
@@ -64,7 +64,7 @@ export const livestreamsTableViewerCountGsi = new Gsi({
 	sortKey: "viewerCount"
 })
 
-export const resourceEventShape = z.union([
+export const resourceEventZod = z.union([
 	z.strictObject({
 		id: z.string(),
 		type: z.literal("title-change"),
@@ -76,9 +76,9 @@ export const resourceEventShape = z.union([
 		comment: z.string()
 	})
 ])
-export type ResourceEvent = z.infer<typeof resourceEventShape>
+export type ResourceEvent = z.infer<typeof resourceEventZod>
 export const resourceEventsTable = new Table({
 	tableName: "ResourceEvents",
-	itemShape: resourceEventShape,
+	itemSchema: resourceEventZod,
 	partitionKey: "id"
 })
