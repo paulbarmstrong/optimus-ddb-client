@@ -28,4 +28,10 @@ describe("MergeUnion", () => {
 			{ id: string, type: "comment" | "title" }
 		> = true
 	})
+	test("with optional property", () => {
+		const assertion: AssertEqual<
+			MergeUnion<{ id: string, name?: string } | { id: string, timestamp: number }>,
+			{ id: string, name: string | undefined, timestamp: number }
+		> = true
+	})
 })

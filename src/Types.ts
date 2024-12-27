@@ -4,10 +4,11 @@ import { Table } from "./classes/Table"
 
 export type AnyToNever<T> = [T] extends [any] ? (unknown extends T ? never : T) : T
 
-type UnionKeys<T> = T extends T ? keyof T : never
-export type MergeUnion<T> = {
+export type MergeUnion<T> = MergeUnionAux<OptionalToUndefined<T>>
+type MergeUnionAux<T> = {
 	[K in UnionKeys<T>]: T extends Record<K, infer V> ? V : never
 }
+type UnionKeys<T> = T extends T ? keyof T : never
 
 /** Type representing a condition that specifies a partition. */
 export type PartitionKeyCondition<L,R> = [L, "=", R]
@@ -217,3 +218,9 @@ export type PerKeyItemChange = {
 export type NonStripZodObject = z.ZodObject<any, "strict" | "passthrough">
 
 export type OneOrArray<T> = T | Array<T>
+
+type OptionalToUndefined<U> = U extends any ? OptionalToUndefinedAux<U> : never;
+type OptionalToUndefinedAux<T> = {
+	[P in (keyof T & keyof any)]: T[P]
+}
+

@@ -25,7 +25,7 @@ Items of each Table have an array attribute which identifies its coupled items i
 
 #### Defined in
 
-[src/Types.ts:75](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L75)
+[src/Types.ts:76](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L76)
 
 ___
 
@@ -41,7 +41,7 @@ which identifies its coupled items in this Table.
 
 #### Defined in
 
-[src/Types.ts:69](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L69)
+[src/Types.ts:70](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L70)
 
 ___
 
@@ -56,7 +56,7 @@ peer Table have a string or number attribute which identifies its coupled item i
 
 #### Defined in
 
-[src/Types.ts:61](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L61)
+[src/Types.ts:62](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L62)
 
 ___
 
@@ -70,4 +70,4 @@ Items of each Table have a string or number attribute which identifies its coupl
 
 #### Defined in
 
-[src/Types.ts:54](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L54)
+[src/Types.ts:55](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L55)

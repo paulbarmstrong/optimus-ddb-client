@@ -1,7 +1,7 @@
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
 import { prepDdbTest } from "../../test-utilities/DynamoDb"
 import { Gsi, InvalidResumeKeyError, OptimusDdbClient } from "../../../src"
-import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourceEventsTable, resourcesTable } from "../../test-utilities/Constants"
+import { MyError, connectionsTable, connectionsTableResourceIdGsi, livestreamsTable, livestreamsTableViewerCountGsi, resourceEventsTable, resourcesTable, ticketsTable } from "../../test-utilities/Constants"
 
 let optimus: OptimusDdbClient
 let dynamoDBDocumentClient: DynamoDBDocumentClient
@@ -341,4 +341,25 @@ describe("Table with union itemSchema", () => {
 			{ id: "dddd", type: "new-comment", comment: "hello" }
 		])
 	})
+})
+
+test("contains scan filter on optional array attribute", async () => {
+	const [optimus, dynamoDBDocumentClient] = await prepDdbTest([ticketsTable], [])
+	await dynamoDBDocumentClient.send(new PutCommand({
+		TableName: "Tickets",
+		Item: { id: "1111", title: "ticket 1", version: 0 }
+	}))
+	await dynamoDBDocumentClient.send(new PutCommand({
+		TableName: "Tickets",
+		Item: { id: "2222", title: "ticket 2", version: 0 }
+	}))
+	await dynamoDBDocumentClient.send(new PutCommand({
+		TableName: "Tickets",
+		Item: { id: "3333", title: "ticket 3", sharedUsers: ["paul"], version: 0 }
+	}))
+	const [results] = await optimus.scanItems({
+		index: ticketsTable,
+		filterCondition: ["sharedUsers", "contains", "paul"]
+	})
+	expect(results).toStrictEqual([{ id: "3333", title: "ticket 3", sharedUsers: ["paul"] }])
 })

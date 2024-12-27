@@ -82,3 +82,15 @@ export const resourceEventsTable = new Table({
 	itemSchema: resourceEventZod,
 	partitionKey: "id"
 })
+
+export const ticketZod = z.strictObject({
+	id: z.string(),
+	title: z.string(),
+	sharedUsers: z.optional(z.array(z.string()))
+})
+export type Ticket = z.infer<typeof ticketZod>
+export const ticketsTable = new Table({
+	tableName: "Tickets",
+	itemSchema: ticketZod,
+	partitionKey: "id"
+})

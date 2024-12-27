@@ -44,7 +44,7 @@ Type representing a condition for filtering items during a query or scan.
 
 #### Defined in
 
-[src/Types.ts:42](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L42)
+[src/Types.ts:43](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L43)
 
 ___
 
@@ -63,7 +63,7 @@ Type representing a condition that specifies a partition.
 
 #### Defined in
 
-[src/Types.ts:13](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L13)
+[src/Types.ts:14](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L14)
 
 ___
 
@@ -82,4 +82,4 @@ Type representing a condition that specifies how a partition is queried.
 
 #### Defined in
 
-[src/Types.ts:16](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L16)
+[src/Types.ts:17](https://github.com/paulbarmstrong/optimus-ddb-client/blob/main/src/Types.ts#L17)
